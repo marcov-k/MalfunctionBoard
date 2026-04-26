@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-
-namespace MalfunctionBoard
+﻿namespace MalfunctionBoard
 {
     public partial class App : Application
     {
@@ -11,7 +9,7 @@ namespace MalfunctionBoard
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(new AppShell());
+            return new(new AppShell());
         }
     }
 }
