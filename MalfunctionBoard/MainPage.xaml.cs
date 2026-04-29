@@ -118,12 +118,12 @@
             }
         }
 
-        public bool TryAddDisplay<T>(string binding, out T display, GridDims? dimensions = null) where T : DashboardDisplay, IHasGridDims, new()
+        public bool TryAddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
+            where T : DashboardDisplay, IHasGridDims, IHasGridPos, new()
         {
-            display = new();
-            dimensions ??= display.Dimensions;
+            T display = new() { Title = title };
 
-            if (!DisplayBindings.ContainsKey(binding) && FindOpenPosition(dimensions, out var positions))
+            if (!DisplayBindings.ContainsKey(binding) && ValidPosition(dimensions, position, out var positions))
             {
                 foreach (var pos in positions)
                 {
@@ -145,26 +145,9 @@
             return false;
         }
 
-        bool FindOpenPosition(GridDims dimensions, out List<GridPos> positions)
-        {
-            if (GridDisplays.Count != RowCount * ColumnCount)
-            {
-                for (int row = 0; row < RowCount - (dimensions.Height - 1); row++)
-                {
-                    for (int col = 0; col < ColumnCount - (dimensions.Width - 1); col++)
-                    {
-                        GridPos start = new() { Row = row, Col = col };
+        public void RemoveDisplay(DashboardDisplay display) => MainGrid.Remove(display);
 
-                        if (ValidPosition(dimensions, start, out positions)) return true;
-                    }
-                }
-            }
-
-            positions = [];
-            return false;
-        }
-
-        bool ValidPosition(GridDims dimensions, GridPos start, out List<GridPos> positions)
+        public bool ValidPosition(GridDims dimensions, GridPos start, out List<GridPos> positions)
         {
             positions = [];
 
@@ -198,7 +181,11 @@
         public interface IHasVector2
         {
             int X { get; set; }
+            int MinX { get; }
+            int MaxX { get; }
             int Y { get; set; }
+            int MinY { get; }
+            int MaxY { get; }
         }
 
         public record GridPos : IHasVector2
@@ -208,21 +195,25 @@
                 get => Row;
                 set => Row = value;
             }
+            public int MinX { get => 0; }
+            public int MaxX { get => RowCount - 1; }
             public int Y
             {
                 get => Col;
                 set => Col = value;
             }
+            public int MinY { get => 0; }
+            public int MaxY { get => ColumnCount - 1; }
             public int Row
             {
                 get => _row;
-                set => _row = Math.Clamp(value, 0, RowCount - 1);
+                set => _row = Math.Clamp(value, MinX, MaxX);
             }
             int _row;
             public int Col
             {
                 get => _col;
-                set => _col = Math.Clamp(value, 0, ColumnCount - 1);
+                set => _col = Math.Clamp(value, MinY, MaxY);
             }
             int _col;
         }
@@ -234,10 +225,12 @@
                 get => Width;
                 set => Width = value;
             }
+            public int MinX { get => 1; }
+            public int MaxX { get => ColumnCount; }
             public int Width
             {
                 get => _width;
-                set => _width = Math.Clamp(value, 1, ColumnCount);
+                set => _width = Math.Clamp(value, MinX, MaxX);
             }
             int _width;
             public int Y
@@ -245,10 +238,12 @@
                 get => Height;
                 set => Height = value;
             }
+            public int MinY { get => 1; }
+            public int MaxY { get => RowCount; }
             public int Height
             {
                 get => _height;
-                set => _height = Math.Clamp(value, 1, RowCount);
+                set => _height = Math.Clamp(value, MinY, MaxY);
             }
             int _height;
         }
@@ -258,11 +253,16 @@
             GridDims Dimensions { get; }
         }
 
+        public interface IHasGridPos
+        {
+            GridPos Position { get; set; }
+        }
+
         public interface ICreatable { }
 
-        public partial class DashboardDisplay : ContentView, IHasGridDims
+        public partial class DashboardDisplay : ContentView, IHasGridDims, IHasGridPos
         {
-            public GridPos Position = new() { Row = 0, Col = 0 };
+            public GridPos Position { get; set; } = new() { Row = 0, Col = 0 };
             public virtual GridDims Dimensions => new() { Width = 1, Height = 1 };
             public string Title
             {
@@ -366,7 +366,7 @@
             {
                 if (MyPage.PropertiesWindow != null) Application.Current?.CloseWindow(MyPage.PropertiesWindow);
 
-                var window = new Window(new PropertiesPage(DisplayType));
+                var window = new Window(new PropertiesPage(DisplayType, MyPage));
                 MyPage.PropertiesWindow = window;
                 Application.Current?.OpenWindow(window);
             }
@@ -378,23 +378,30 @@
         const double WindowWidth = 500;
         const double WindowHeight = 400;
         const double VerticalSpacing = 10;
+        const double ButtonSpacing = 10;
         const double TextSize = 20;
         static readonly Thickness Margin = new(10);
         static readonly Color WindowColor = Colors.DarkGray;
+        static readonly Color ConfirmColor = Colors.Green;
+        static readonly Color ConfirmHoverColor = Colors.DarkGreen;
+        static readonly Color CancelColor = Colors.SlateGray;
+        static readonly Color CancelHoverColor = Colors.DarkSlateGray;
+        static readonly Color DeleteColor = Colors.Red;
+        static readonly Color DeleteHoverColor = Colors.DarkRed;
         public string DisplayTitle
         {
             get => (string)GetValue(DisplayTitleProperty);
             set => SetValue(DisplayTitleProperty, value);
         }
         public static readonly BindableProperty DisplayTitleProperty =
-            BindableProperty.Create(nameof(DisplayTitle), typeof(string), typeof(PropertiesPage), "New Display");
+            BindableProperty.Create(nameof(DisplayTitle), typeof(string), typeof(PropertiesPage), string.Empty);
         public string DisplayBinding
         {
             get => (string)GetValue(DisplayBindingProperty);
             set => SetValue(DisplayBindingProperty, value);
         }
         public static readonly BindableProperty DisplayBindingProperty =
-            BindableProperty.Create(nameof(DisplayBinding), typeof(string), typeof(PropertiesPage), "New Binding");
+            BindableProperty.Create(nameof(DisplayBinding), typeof(string), typeof(PropertiesPage), string.Empty);
         public GridPos DisplayPosition
         {
             get => (GridPos)GetValue(DisplayPositionProperty);
@@ -409,11 +416,16 @@
         }
         public static readonly BindableProperty DisplayDimensionsProperty =
             BindableProperty.Create(nameof(DisplayDimensions), typeof(GridDims), typeof(PropertiesPage), new GridDims());
+        readonly MainPage MainPage;
+        readonly DashboardDisplay? ShownDisplay;
+        readonly MethodInfo? AddDisplayMethod;
 
-        public PropertiesPage(Type displayType)
+        public PropertiesPage(Type displayType, MainPage mainPage, DashboardDisplay? display = null)
         {
             Title = "Display Properties";
             BackgroundColor = WindowColor;
+            MainPage = mainPage;
+            ShownDisplay = display;
 
             VerticalStackLayout pageLayout = new()
             {
@@ -437,6 +449,8 @@
                 Title = "Name",
                 FirstPlaceholder = "Enter name..."
             };
+            titleEntry.SetBinding(InputField.FirstInputProperty, new Binding(nameof(DisplayTitle),
+                mode: BindingMode.TwoWay, source: this));
             pageLayout.Add(titleEntry);
 
             var bindingEntry = new InputField()
@@ -444,6 +458,8 @@
                 Title = "Binding",
                 FirstPlaceholder = "Enter binding..."
             };
+            bindingEntry.SetBinding(InputField.FirstInputProperty, new Binding(nameof(DisplayBinding),
+                mode: BindingMode.TwoWay, source: this));
             pageLayout.Add(bindingEntry);
 
             var posEntry = new Vector2InputField<GridPos>()
@@ -452,6 +468,8 @@
                 FirstPlaceholder = "Enter x...",
                 SecondPlaceholder = "Enter y..."
             };
+            posEntry.SetBinding(Vector2InputField<GridPos>.VectorProperty, new Binding(nameof(DisplayPosition),
+                mode: BindingMode.TwoWay, source: this));
             pageLayout.Add(posEntry);
 
             var dimsEntry = new Vector2InputField<GridDims>()
@@ -460,9 +478,81 @@
                 FirstPlaceholder = "Enter width...",
                 SecondPlaceholder = "Enter height..."
             };
+            dimsEntry.SetBinding(Vector2InputField<GridDims>.VectorProperty, new Binding(nameof(DisplayDimensions),
+                mode: BindingMode.TwoWay, source: this));
+            (dimsEntry.FirstInput, dimsEntry.SecondInput) = ("1", "1");
             pageLayout.Add(dimsEntry);
 
+            HorizontalStackLayout buttonLayout = new()
+            {
+                Spacing = ButtonSpacing,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill
+            };
+
+            if (ShownDisplay is not null)
+            {
+                Button deleteButton = new()
+                {
+                    Text = "Delete",
+                    FontSize = TextSize,
+                    BackgroundColor = DeleteColor,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Fill
+                };
+
+                PointerGestureRecognizer deleteGesture = new();
+                deleteGesture.PointerEntered += (_, _) => deleteButton.BackgroundColor = DeleteHoverColor;
+                deleteGesture.PointerExited += (_, _) => deleteButton.BackgroundColor = DeleteColor;
+
+                deleteButton.GestureRecognizers.Add(deleteGesture);
+                deleteButton.Clicked += (_, _) => Delete();
+
+                buttonLayout.Add(deleteButton);
+            }
+
+            Button cancelButton = new()
+            {
+                Text = "Cancel",
+                FontSize = TextSize,
+                BackgroundColor = CancelColor,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill
+            };
+
+            PointerGestureRecognizer cancelGesture = new();
+            cancelGesture.PointerEntered += (_, _) => cancelButton.BackgroundColor = CancelHoverColor;
+            cancelGesture.PointerExited += (_, _) => cancelButton.BackgroundColor = CancelColor;
+
+            cancelButton.GestureRecognizers.Add(cancelGesture);
+            cancelButton.Clicked += (_, _) => Close();
+
+            buttonLayout.Add(cancelButton);
+
+            Button confirmButton = new()
+            {
+                Text = "Confirm",
+                FontSize = TextSize,
+                BackgroundColor = ConfirmColor,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill
+            };
+
+            PointerGestureRecognizer confirmGesture = new();
+            confirmGesture.PointerEntered += (_, _) => confirmButton.BackgroundColor = ConfirmHoverColor;
+            confirmGesture.PointerExited += (_, _) => confirmButton.BackgroundColor = ConfirmColor;
+
+            confirmButton.GestureRecognizers.Add(confirmGesture);
+            confirmButton.Clicked += (_, _) => Confirm();
+
+            buttonLayout.Add(confirmButton);
+
+            pageLayout.Add(buttonLayout);
+
             Content = pageLayout;
+
+            var tryAddInfo = typeof(MainPage).GetMethod("TryAddDisplay");
+            AddDisplayMethod = tryAddInfo?.MakeGenericMethod(displayType);
 
             Loaded += OnPageLoaded;
         }
@@ -487,6 +577,34 @@
                 Window.X = (screenWidth / 2) - (WindowWidth / 2);
                 Window.Y = (screenHeight / 2) - (WindowHeight / 2);
             }
+        }
+
+        void Confirm()
+        {
+            if (string.IsNullOrEmpty(DisplayTitle)) return;
+            if (string.IsNullOrEmpty(DisplayBinding)) return;
+
+            if (DisplayPosition is null || DisplayDimensions is null) return;
+            else if (!MainPage.ValidPosition(DisplayDimensions, DisplayPosition, out _)) return;
+
+            dynamic? success = false;
+            if (ShownDisplay is null) success = AddDisplayMethod?.Invoke(MainPage, [DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions]);
+
+            if (success is not null && success) Close();
+        }
+
+        void Delete()
+        {
+            if (ShownDisplay is null) return;
+
+            MainPage.RemoveDisplay(ShownDisplay);
+            Close();
+        }
+
+        void Close()
+        {
+            MainPage.PropertiesWindow = null;
+            Application.Current?.CloseWindow(Window);
         }
 
         public partial class InputField : ContentView
@@ -590,8 +708,6 @@
                 BindableProperty.Create(nameof(Vector), typeof(T), typeof(Vector2InputField<>), new T(),
                     propertyChanged: OnVectorChanged);
 
-            
-
             protected override Grid InitGrid()
             {
                 return new()
@@ -628,7 +744,7 @@
 
             protected override void OnInputChanged(object? sender, TextChangedEventArgs e)
             {
-                if (!string.IsNullOrEmpty(e.NewTextValue) && !int.TryParse(e.NewTextValue, out _) && sender != null)
+                if (!string.IsNullOrEmpty(e.NewTextValue) && !int.TryParse(e.NewTextValue, out int newVal) && sender != null)
                 {
                     ((Entry)sender).Text = e.OldTextValue;
                 }
@@ -641,12 +757,18 @@
                 switch (propertyName)
                 {
                     case nameof(FirstInput):
-                        if (int.TryParse(FirstInput, out int x) &&
-                            x != Vector.X) Vector = new() { X = x, Y = Vector.Y };
+                        if (int.TryParse(FirstInput, out int x) && x != Vector.X)
+                        {
+                            FirstInput = Math.Clamp(x, Vector.MinX, Vector.MaxX).ToString();
+                            Vector = new() { X = x, Y = Vector.Y };
+                        }
                         break;
                     case nameof(SecondInput):
-                        if (int.TryParse(SecondInput, out int y) &&
-                            y != Vector.Y) Vector = new() { X = Vector.X, Y = y };
+                        if (int.TryParse(SecondInput, out int y) && y != Vector.Y)
+                        {
+                            SecondInput = Math.Clamp(y, Vector.MinY, Vector.MaxY).ToString();
+                            Vector = new() { X = Vector.X, Y = y };
+                        }
                         break;
                 }
             }
