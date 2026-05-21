@@ -3,6 +3,7 @@
     using Microsoft.Maui.Devices;
     using Microsoft.Maui.Layouts;
     using System.Reflection;
+    using System.Runtime.InteropServices;
     using static MalfunctionBoard.MainPage;
 
     public partial class MainPage : ContentPage
@@ -21,7 +22,6 @@
         static readonly Color CellColor = Colors.Gray;
         static readonly Color GridColor = Colors.LightGray;
         static readonly Color PageColor = Colors.DarkGray;
-        public Window? PropertiesWindow = null;
 
         public MainPage()
         {
@@ -121,7 +121,7 @@
         public bool TryAddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
             where T : DashboardDisplay, IHasGridDims, IHasGridPos, new()
         {
-            T display = new() { Title = title };
+            T display = new() { MyPage = this, Title = title, Binding = binding };
 
             if (!DisplayBindings.Any(b => b.Binding == binding) && ValidPosition(dimensions, position, out var positions))
             {
@@ -146,8 +146,9 @@
         public bool TryChangeDisplay(DashboardDisplay display, string newTitle, string newBinding, GridPos newPos, GridDims newDims)
         {
             var newPositions = GridDisplays.Where(d => d.Display != display).ToList();
+            var newBindings = DisplayBindings.Where(b => b.Display != display).ToList();
 
-            if (!DisplayBindings.Any(b => b.Binding == newBinding) && ValidPosition(newDims, newPos, out var positions, newPositions))
+            if (!newBindings.Any(b => b.Binding == newBinding) && ValidPosition(newDims, newPos, out var positions, newPositions))
             {
                 DisplayBindings.RemoveAll(b => b.Display == display);
                 DisplayBindings.Add(new(newBinding, display));
@@ -155,7 +156,10 @@
                 GridDisplays.RemoveAll(d => d.Display == display);
                 GridDisplays.AddRange(positions.Select(p => new GridDisplay(p, display)));
 
+                MainGrid.Remove(display);
+
                 display.Title = newTitle;
+                display.Binding = newBinding;
                 display.Position = positions[0];
                 display.Dimensions = newDims;
                 MainGrid.SetRow(display, positions[0].Row);
@@ -163,6 +167,7 @@
                 MainGrid.SetColumn(display, positions[0].Col);
                 MainGrid.SetColumnSpan(display, newDims.Width);
 
+                MainGrid.Add(display);
                 return true;
             }
 
@@ -296,11 +301,13 @@
 
         public partial class DashboardDisplay : ContentView, IHasGridDims, IHasGridPos
         {
+            public required MainPage? MyPage { get; set; }
             public GridPos Position { get; set; } = new() { Row = 0, Col = 0 };
             public virtual GridDims Dimensions { get; set; } = new() { Width = 1, Height = 1 };
+            public string Binding { get; set; } = string.Empty;
             public string Title
             {
-                get => (string)GetValue(TitleProperty);
+                get => ((string)GetValue(TitleProperty))[..^1];
                 set => SetValue(TitleProperty, value + ":");
             }
             public static readonly BindableProperty TitleProperty =
@@ -326,6 +333,10 @@
                 BackgroundColor = CellColor;
                 Title = "New Display";
 
+                PointerGestureRecognizer clickGesture = new();
+                clickGesture.PointerPressed += (_, _) => ChangeDisplay();
+                GestureRecognizers.Add(clickGesture);
+
                 HorizontalOptions = LayoutOptions.Fill;
                 VerticalOptions = LayoutOptions.Fill;
 
@@ -342,6 +353,11 @@
                 MyLayout.Children.Add(title);
 
                 Content = MyLayout;
+            }
+
+            void ChangeDisplay()
+            {
+                if (MyPage is not null) PropertiesPage.OpenPropertiesPage(GetType(), MyPage, this);
             }
         }
 
@@ -396,14 +412,7 @@
                 Clicked += (_, _) => OpenProperties();
             }
 
-            void OpenProperties()
-            {
-                if (MyPage.PropertiesWindow != null) Application.Current?.CloseWindow(MyPage.PropertiesWindow);
-
-                var window = new Window(new PropertiesPage(DisplayType, MyPage));
-                MyPage.PropertiesWindow = window;
-                Application.Current?.OpenWindow(window);
-            }
+            void OpenProperties() => PropertiesPage.OpenPropertiesPage(DisplayType, MyPage);
         }
     }
 
@@ -454,6 +463,52 @@
         readonly DashboardDisplay? ShownDisplay;
         readonly MethodInfo? AddDisplayMethod;
 
+        public static void OpenPropertiesPage(Type displayType, MainPage mainPage, DashboardDisplay? display = null)
+        {
+            var propertiesWindow = new Window(new PropertiesPage(displayType, mainPage, display));
+            Application.Current?.OpenWindow(propertiesWindow);
+
+            #if WINDOWS
+                var main = mainPage.Window.Handler.PlatformView as Microsoft.UI.Xaml.Window;
+                var properties = propertiesWindow.Handler.PlatformView as Microsoft.UI.Xaml.Window;
+
+                if (main != null && properties != null)
+                {
+                    IntPtr mainHwnd = WinRT.Interop.WindowNative.GetWindowHandle(main);
+                    IntPtr propertiesHwnd = WinRT.Interop.WindowNative.GetWindowHandle(properties);
+
+                    const int GWL_HWNDPARENT = -8;
+                    if (IntPtr.Size == 8)
+                    {
+                        SetWindowLongPtr64(propertiesHwnd, GWL_HWNDPARENT, mainHwnd);
+                    }
+                    else
+                    {
+                        SetWindowLong32(propertiesHwnd, GWL_HWNDPARENT, mainHwnd.ToInt32());
+                    }
+
+                    var subAppWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(propertiesHwnd));
+                    var presenter = Microsoft.UI.Windowing.OverlappedPresenter.CreateForDialog();
+                    presenter.IsModal = true;
+                    subAppWindow.SetPresenter(presenter);
+
+                    properties.Closed += (_, _) => SetForegroundWindow(mainHwnd);
+                }
+            #endif
+        }
+
+        #if WINDOWS
+        [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
+        private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+        private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+        #endif
+
         public PropertiesPage(Type displayType, MainPage mainPage, DashboardDisplay? display = null)
         {
             Title = "Display Properties";
@@ -485,6 +540,7 @@
             };
             titleEntry.SetBinding(InputField.FirstInputProperty, new Binding(nameof(DisplayTitle),
                 mode: BindingMode.TwoWay, source: this));
+            if (ShownDisplay is not null) titleEntry.FirstInput = ShownDisplay.Title;
             pageLayout.Add(titleEntry);
 
             var bindingEntry = new InputField()
@@ -494,16 +550,18 @@
             };
             bindingEntry.SetBinding(InputField.FirstInputProperty, new Binding(nameof(DisplayBinding),
                 mode: BindingMode.TwoWay, source: this));
+            if (ShownDisplay is not null) bindingEntry.FirstInput = ShownDisplay.Binding;
             pageLayout.Add(bindingEntry);
 
             var posEntry = new Vector2InputField<GridPos>()
             {
                 Title = "Position",
-                FirstPlaceholder = "Enter x...",
-                SecondPlaceholder = "Enter y..."
+                FirstPlaceholder = "Enter row...",
+                SecondPlaceholder = "Enter column..."
             };
             posEntry.SetBinding(Vector2InputField<GridPos>.VectorProperty, new Binding(nameof(DisplayPosition),
                 mode: BindingMode.TwoWay, source: this));
+            if (ShownDisplay is not null) (posEntry.FirstInput, posEntry.SecondInput) = (ShownDisplay.Position.X.ToString(), ShownDisplay.Position.Y.ToString());
             pageLayout.Add(posEntry);
 
             var dimsEntry = new Vector2InputField<GridDims>()
@@ -514,13 +572,13 @@
             };
             dimsEntry.SetBinding(Vector2InputField<GridDims>.VectorProperty, new Binding(nameof(DisplayDimensions),
                 mode: BindingMode.TwoWay, source: this));
-            (dimsEntry.FirstInput, dimsEntry.SecondInput) = ("1", "1");
+            (dimsEntry.FirstInput, dimsEntry.SecondInput) = ShownDisplay is null ? ("1", "1") : (ShownDisplay.Dimensions.Width.ToString(), ShownDisplay.Dimensions.Height.ToString());
             pageLayout.Add(dimsEntry);
 
             HorizontalStackLayout buttonLayout = new()
             {
                 Spacing = ButtonSpacing,
-                HorizontalOptions = LayoutOptions.Fill,
+                HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Fill
             };
 
@@ -596,10 +654,10 @@
             Window.Title = Title;
             (Window.Width, Window.Height) = (WindowWidth, WindowHeight);
 
-            #if MACCATALYST
+#if MACCATALYST
             (Window.MinimumWidth, Window.MaximumWidth) = (WindowWidth, WindowWidth);
             (Window.MinimumHeight, Window.MaximumHeight) = (WindowHeight, WindowHeight);
-            #endif
+#endif
 
             var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
 
@@ -619,7 +677,6 @@
             if (string.IsNullOrEmpty(DisplayBinding)) return;
 
             if (DisplayPosition is null || DisplayDimensions is null) return;
-            else if (!MainPage.ValidPosition(DisplayDimensions, DisplayPosition, out _)) return;
 
             dynamic? success;
             if (ShownDisplay is null) success = AddDisplayMethod?.Invoke(MainPage, [DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions]);
@@ -636,11 +693,7 @@
             Close();
         }
 
-        void Close()
-        {
-            MainPage.PropertiesWindow = null;
-            Application.Current?.CloseWindow(Window);
-        }
+        void Close() => Application.Current?.CloseWindow(Window);
 
         public partial class InputField : ContentView
         {
