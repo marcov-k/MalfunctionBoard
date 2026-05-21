@@ -8,8 +8,8 @@
     public partial class MainPage : ContentPage
     {
         readonly Grid MainGrid;
-        readonly Dictionary<GridPos, DashboardDisplay> GridDisplays = [];
-        readonly Dictionary<string, DashboardDisplay> DisplayBindings = [];
+        readonly List<GridDisplay> GridDisplays = [];
+        readonly List<DisplayBinding> DisplayBindings = [];
         readonly List<Type> DisplayTypes = [];
         const int RowCount = 4;
         const int ColumnCount = 6;
@@ -123,20 +123,18 @@
         {
             T display = new() { Title = title };
 
-            if (!DisplayBindings.ContainsKey(binding) && ValidPosition(dimensions, position, out var positions))
+            if (!DisplayBindings.Any(b => b.Binding == binding) && ValidPosition(dimensions, position, out var positions))
             {
-                foreach (var pos in positions)
-                {
-                    GridDisplays.Add(pos, display);
-                }
+                GridDisplays.AddRange(positions.Select(p => new GridDisplay(p, display)));
 
                 display.Position = positions[0];
+                display.Dimensions = dimensions;
                 MainGrid.SetRow(display, positions[0].Row);
                 MainGrid.SetRowSpan(display, dimensions.Height);
                 MainGrid.SetColumn(display, positions[0].Col);
                 MainGrid.SetColumnSpan(display, dimensions.Width);
 
-                DisplayBindings.Add(binding, display);
+                DisplayBindings.Add(new(binding, display));
 
                 MainGrid.Add(display);
                 return true;
@@ -145,10 +143,42 @@
             return false;
         }
 
-        public void RemoveDisplay(DashboardDisplay display) => MainGrid.Remove(display);
-
-        public bool ValidPosition(GridDims dimensions, GridPos start, out List<GridPos> positions)
+        public bool TryChangeDisplay(DashboardDisplay display, string newTitle, string newBinding, GridPos newPos, GridDims newDims)
         {
+            var newPositions = GridDisplays.Where(d => d.Display != display).ToList();
+
+            if (!DisplayBindings.Any(b => b.Binding == newBinding) && ValidPosition(newDims, newPos, out var positions, newPositions))
+            {
+                DisplayBindings.RemoveAll(b => b.Display == display);
+                DisplayBindings.Add(new(newBinding, display));
+
+                GridDisplays.RemoveAll(d => d.Display == display);
+                GridDisplays.AddRange(positions.Select(p => new GridDisplay(p, display)));
+
+                display.Title = newTitle;
+                display.Position = positions[0];
+                display.Dimensions = newDims;
+                MainGrid.SetRow(display, positions[0].Row);
+                MainGrid.SetRowSpan(display, newDims.Height);
+                MainGrid.SetColumn(display, positions[0].Col);
+                MainGrid.SetColumnSpan(display, newDims.Width);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public void RemoveDisplay(DashboardDisplay display)
+        {
+            DisplayBindings.RemoveAll(b => b.Display == display);
+            GridDisplays.RemoveAll(d => d.Display == display);
+            MainGrid.Remove(display);
+        }
+
+        public bool ValidPosition(GridDims dimensions, GridPos start, out List<GridPos> positions, List<GridDisplay>? gridDisplays = null)
+        {
+            gridDisplays ??= GridDisplays;
             positions = [];
 
             for (int row = 0; row < dimensions.Height; row++)
@@ -161,7 +191,7 @@
 
             foreach (var pos in positions)
             {
-                if (GridDisplays.ContainsKey(pos)) return false;
+                if (gridDisplays.Any(d => d.Position == pos)) return false;
             }
 
             return true;
@@ -177,6 +207,10 @@
                 DisplayTypes.Add(displayType);
             }
         }
+
+        public record DisplayBinding(string Binding, DashboardDisplay Display);
+
+        public record GridDisplay(GridPos Position, DashboardDisplay Display);
 
         public interface IHasVector2
         {
@@ -250,7 +284,7 @@
 
         public interface IHasGridDims
         {
-            GridDims Dimensions { get; }
+            GridDims Dimensions { get; set; }
         }
 
         public interface IHasGridPos
@@ -263,7 +297,7 @@
         public partial class DashboardDisplay : ContentView, IHasGridDims, IHasGridPos
         {
             public GridPos Position { get; set; } = new() { Row = 0, Col = 0 };
-            public virtual GridDims Dimensions => new() { Width = 1, Height = 1 };
+            public virtual GridDims Dimensions { get; set; } = new() { Width = 1, Height = 1 };
             public string Title
             {
                 get => (string)GetValue(TitleProperty);
@@ -563,7 +597,7 @@
             (Window.Width, Window.Height) = (WindowWidth, WindowHeight);
 
             #if MACCATALYST
-            (Window.MinimumWidth, Window.MaximumHeight) = (WindowWidth, WindowWidth);
+            (Window.MinimumWidth, Window.MaximumWidth) = (WindowWidth, WindowWidth);
             (Window.MinimumHeight, Window.MaximumHeight) = (WindowHeight, WindowHeight);
             #endif
 
@@ -587,8 +621,9 @@
             if (DisplayPosition is null || DisplayDimensions is null) return;
             else if (!MainPage.ValidPosition(DisplayDimensions, DisplayPosition, out _)) return;
 
-            dynamic? success = false;
+            dynamic? success;
             if (ShownDisplay is null) success = AddDisplayMethod?.Invoke(MainPage, [DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions]);
+            else success = MainPage.TryChangeDisplay(ShownDisplay, DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions);
 
             if (success is not null && success) Close();
         }
