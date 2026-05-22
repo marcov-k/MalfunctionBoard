@@ -5,6 +5,8 @@
     using System.Text.Json;
     using System.Reflection;
     using System.Runtime.InteropServices;
+    using FRC.NetworkTables;
+    using System.Diagnostics;
     using static MalfunctionBoard.MainPage;
 
     public partial class MainPage : ContentPage
@@ -23,6 +25,7 @@
         static readonly Color CellColor = Colors.Gray;
         static readonly Color GridColor = Colors.LightGray;
         static readonly Color PageColor = Colors.DarkGray;
+        const string TableName = "datatable";
 
         public MainPage()
         {
@@ -119,6 +122,13 @@
             }
 
             Saver.LoadLayout(this);
+
+            var instance = NetworkTableInstance.Default;
+            instance.StartServer();
+            instance.GetTable(TableName).GetEntry("test").SetDouble(5.5);
+
+            NetworkTableReader.StartReader(TableName, this);
+            NetworkTableReader.WritingTester(TableName, "test");
         }
 
         public bool TryAddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
@@ -172,6 +182,14 @@
             }
 
             return false;
+        }
+
+        public void UpdateDisplay(string binding, object? data)
+        {
+            if (data is null) return;
+
+            var display = DisplayBindings.Find(b => b.Binding == binding)?.Display;
+            if (display is ITableValue valueDisplay) valueDisplay.TableValue = data;
         }
 
         public void RemoveDisplay(DashboardDisplay display)
@@ -303,6 +321,11 @@
 
         public interface ICreatable { }
 
+        public interface ITableValue
+        {
+            public object? TableValue { get; set; }
+        }
+
         public partial class DashboardDisplay : ContentView, IHasGridDims, IHasGridPos
         {
             public required MainPage? MyPage { get; set; }
@@ -365,15 +388,26 @@
             }
         }
 
-        public partial class ValueDisplay<T> : DashboardDisplay
+        public partial class ValueDisplay<T> : DashboardDisplay, ITableValue
         {
+            public object? TableValue
+            {
+                get => Value;
+                set
+                {
+                    if (value is not null)
+                    {
+                        Value = (T)Convert.ChangeType(value, typeof(T));
+                    }
+                }
+            }
             public T Value
             {
                 get => (T)GetValue(ValueProperty);
                 set => SetValue(ValueProperty, value);
             }
             public static readonly BindableProperty ValueProperty =
-                BindableProperty.Create(nameof(Value), typeof(T), typeof(ValueDisplay<>), null);
+                BindableProperty.Create(nameof(Value), typeof(T), typeof(ValueDisplay<>), default(T));
             public double ValueSize
             {
                 get => (double)GetValue(ValueSizeProperty);
@@ -1041,5 +1075,36 @@
 
         [Serializable]
         public record DisplayData(string? DisplayType, string Title, string Binding, GridPos Position, GridDims Dimensions);
+    }
+
+    public static class NetworkTableReader
+    {
+        static readonly Random random = new();
+
+        public static void StartReader(string tableName, MainPage mainPage)
+        {
+            var table = NetworkTableInstance.Default.GetTable(tableName);
+
+            table.AddEntryListener((tbl, key, in entry, in value, flags) =>
+            {
+                var binding = key.ToString();
+                var data = entry.GetObjectValue();
+
+                MainThread.BeginInvokeOnMainThread(() =>
+                    mainPage.UpdateDisplay(binding, data));
+            },
+            NotifyFlags.Immediate | NotifyFlags.New | NotifyFlags.Update | NotifyFlags.Local);
+        }
+
+        public static async void WritingTester(string tableName, string binding)
+        {
+            var table = NetworkTableInstance.Default.GetTable(tableName);
+            while (true)
+            {
+                double testValue = random.NextDouble();
+                table.GetEntry(binding).SetDouble(testValue);
+                await Task.Delay(500);
+            }
+        }
     }
 }
