@@ -6,7 +6,6 @@
     using System.Reflection;
     using System.Runtime.InteropServices;
     using FRC.NetworkTables;
-    using System.Diagnostics;
     using static MalfunctionBoard.MainPage;
 
     public partial class MainPage : ContentPage
@@ -128,7 +127,6 @@
             instance.GetTable(TableName).GetEntry("test").SetDouble(5.5);
 
             NetworkTableReader.StartReader(TableName, this);
-            NetworkTableReader.WritingTester(TableName, "test");
         }
 
         public bool TryAddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
@@ -345,7 +343,7 @@
                 set => SetValue(TitleSizeProperty, value);
             }
             public static readonly BindableProperty TitleSizeProperty =
-                BindableProperty.Create(nameof(TitleSize), typeof(double), typeof(DashboardDisplay), 20.0);
+                BindableProperty.Create(nameof(TitleSize), typeof(double), typeof(DashboardDisplay), 30.0);
             public Color TextColor
             {
                 get => (Color)GetValue(TextColorProperty);
@@ -393,13 +391,7 @@
             public object? TableValue
             {
                 get => Value;
-                set
-                {
-                    if (value is not null)
-                    {
-                        Value = (T)Convert.ChangeType(value, typeof(T));
-                    }
-                }
+                set => UpdateValue(value);
             }
             public T Value
             {
@@ -407,35 +399,87 @@
                 set => SetValue(ValueProperty, value);
             }
             public static readonly BindableProperty ValueProperty =
-                BindableProperty.Create(nameof(Value), typeof(T), typeof(ValueDisplay<>), default(T));
+                BindableProperty.Create(nameof(Value), typeof(T), typeof(ValueDisplay<>), default(T), propertyChanged: OnValueChanged);
             public double ValueSize
             {
                 get => (double)GetValue(ValueSizeProperty);
                 set => SetValue(ValueSizeProperty, value);
             }
             public static readonly BindableProperty ValueSizeProperty =
-                BindableProperty.Create(nameof(ValueSize), typeof(double), typeof(ValueDisplay<>), 30.0);
+                BindableProperty.Create(nameof(ValueSize), typeof(double), typeof(ValueDisplay<>), 20.0);
 
-            public ValueDisplay()
+            protected virtual void UpdateValue(object? newValue)
             {
-                var valueLabel = new Label();
-                valueLabel.SetBinding(Label.TextProperty, new Binding(nameof(Value), source: this));
-                valueLabel.SetBinding(Label.FontSizeProperty, new Binding(nameof(ValueSize), source: this));
-                valueLabel.SetBinding(Label.TextColorProperty, new Binding(nameof(TextColor), source: this));
-                (valueLabel.AnchorX, valueLabel.AnchorY) = (0.5, 0.5);
+                throw new NotImplementedException();
+            }
 
-                MyLayout.SetLayoutBounds(valueLabel, new(0.5, 0.6, -1, -1));
-                MyLayout.SetLayoutFlags(valueLabel, AbsoluteLayoutFlags.PositionProportional);
+            protected static void OnValueChanged(BindableObject bindable, object oldValue, object newValue)
+            {
+                if (bindable is ValueDisplay<T> control) control.UpdateDisplayedValue(newValue);
+            }
 
-                MyLayout.Children.Add(valueLabel);
+            protected virtual void UpdateDisplayedValue(object newValue)
+            {
+                throw new NotImplementedException();
             }
         }
 
-        public partial class IntDisplay : ValueDisplay<int>, ICreatable { }
+        public partial class ValueLabelDisplay<T> : ValueDisplay<T>
+        {
+            protected readonly Label ValueLabel;
 
-        public partial class DoubleDisplay : ValueDisplay<double>, ICreatable { }
+            public ValueLabelDisplay()
+            {
+                ValueLabel = new Label();
+                ValueLabel.SetBinding(Label.FontSizeProperty, new Binding(nameof(ValueSize), source: this));
+                ValueLabel.SetBinding(Label.TextColorProperty, new Binding(nameof(TextColor), source: this));
+                (ValueLabel.AnchorX, ValueLabel.AnchorY) = (0.5, 0.5);
 
-        public partial class StringDisplay : ValueDisplay<string>, ICreatable { }
+                MyLayout.SetLayoutBounds(ValueLabel, new(0.5, 0.6, -1, -1));
+                MyLayout.SetLayoutFlags(ValueLabel, AbsoluteLayoutFlags.PositionProportional);
+
+                MyLayout.Children.Add(ValueLabel);
+            }
+        }
+
+        public partial class IntDisplay : ValueLabelDisplay<int>, ICreatable
+        {
+            protected override void UpdateValue(object? newValue)
+            {
+                if (newValue is int intValue) Value = intValue;
+            }
+
+            protected override void UpdateDisplayedValue(object newValue)
+            {
+                if (newValue is int intValue) ValueLabel.Text = intValue.ToString();
+            }
+        }
+
+        public partial class DoubleDisplay : ValueLabelDisplay<double>, ICreatable
+        {
+            protected override void UpdateValue(object? newValue)
+            {
+                if (newValue is double doubleValue) Value = doubleValue;
+            }
+
+            protected override void UpdateDisplayedValue(object newValue)
+            {
+                if (newValue is double doubleValue) ValueLabel.Text = doubleValue.ToString();
+            }
+        }
+
+        public partial class StringDisplay : ValueLabelDisplay<string>, ICreatable
+        {
+            protected override void UpdateValue(object? newValue)
+            {
+                if (newValue is string stringValue) Value = stringValue;
+            }
+
+            protected override void UpdateDisplayedValue(object newValue)
+            {
+                if (newValue is string stringValue) ValueLabel.Text = stringValue;
+            }
+        }
 
         public partial class DisplayAddButton : Button
         {
@@ -1079,8 +1123,6 @@
 
     public static class NetworkTableReader
     {
-        static readonly Random random = new();
-
         public static void StartReader(string tableName, MainPage mainPage)
         {
             var table = NetworkTableInstance.Default.GetTable(tableName);
@@ -1094,17 +1136,6 @@
                     mainPage.UpdateDisplay(binding, data));
             },
             NotifyFlags.Immediate | NotifyFlags.New | NotifyFlags.Update | NotifyFlags.Local);
-        }
-
-        public static async void WritingTester(string tableName, string binding)
-        {
-            var table = NetworkTableInstance.Default.GetTable(tableName);
-            while (true)
-            {
-                double testValue = random.NextDouble();
-                table.GetEntry(binding).SetDouble(testValue);
-                await Task.Delay(500);
-            }
         }
     }
 }
