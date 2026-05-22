@@ -2,7 +2,7 @@
 {
     using Microsoft.Maui.Devices;
     using Microsoft.Maui.Layouts;
-    using System.Formats.Tar;
+    using System.Text.Json;
     using System.Reflection;
     using System.Runtime.InteropServices;
     using static MalfunctionBoard.MainPage;
@@ -11,7 +11,7 @@
     {
         readonly Grid MainGrid;
         readonly List<GridDisplay> GridDisplays = [];
-        readonly List<DisplayBinding> DisplayBindings = [];
+        public readonly List<DisplayBinding> DisplayBindings = [];
         readonly List<Type> DisplayTypes = [];
         const int RowCount = 4;
         const int ColumnCount = 6;
@@ -117,6 +117,8 @@
                     #endif
                 }
             }
+
+            Saver.LoadLayout(this);
         }
 
         public bool TryAddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
@@ -215,6 +217,7 @@
 
         public record DisplayBinding(string Binding, DashboardDisplay Display);
 
+        [Serializable]
         public record GridDisplay(GridPos Position, DashboardDisplay Display);
 
         public interface IHasVector2
@@ -227,6 +230,7 @@
             int MaxY { get; }
         }
 
+        [Serializable]
         public record GridPos : IHasVector2
         {
             public int X
@@ -642,7 +646,11 @@
                 else success = MainPage.TryChangeDisplay(ShownDisplay, DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions);
             }
 
-            if (success is not null && success) Close();
+            if (success is not null && success)
+            {
+                Saver.SaveLayout(MainPage);
+                Close();
+            }
             else
             {
                 string warning = string.Empty;
@@ -660,7 +668,11 @@
 
         void Delete()
         {
-            if (ShownDisplay is not null) MainPage.RemoveDisplay(ShownDisplay);
+            if (ShownDisplay is not null)
+            {
+                MainPage.RemoveDisplay(ShownDisplay);
+                Saver.SaveLayout(MainPage);
+            }
             Close();
         }
 
@@ -977,5 +989,57 @@
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool SetForegroundWindow(IntPtr hWnd);
         #endif
+    }
+
+    public static class Saver
+    {
+        const string FileName = "Layout.mb";
+        static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
+
+        public static void SaveLayout(MainPage mainPage)
+        {
+            var displays = mainPage.DisplayBindings.Select(b => b.Display).ToList();
+
+            List<DisplayData> displayData = [];
+            foreach (var display in displays)
+            {
+                displayData.Add(new(display.GetType().AssemblyQualifiedName, display.Title, display.Binding, display.Position, display.Dimensions));
+            }
+
+            LayoutData layoutData = new(displayData);
+            string jsonData = JsonSerializer.Serialize(layoutData, SerializerOptions);
+            File.WriteAllText(FileName, jsonData);
+        }
+
+        public static void LoadLayout(MainPage mainPage)
+        {
+            if (!File.Exists(FileName)) return;
+
+            string jsonData = File.ReadAllText(FileName);
+            var layoutData = JsonSerializer.Deserialize<LayoutData>(jsonData);
+
+            if (layoutData is not null)
+            {
+                foreach (var display in layoutData.Displays)
+                {
+                    if (display.DisplayType is null) continue;
+
+                    var displayType = Type.GetType(display.DisplayType);
+                    if (displayType is null) continue;
+
+                    var tryAddInfo = typeof(MainPage).GetMethod("TryAddDisplay");
+                    var addDisplayMethod = tryAddInfo?.MakeGenericMethod(displayType);
+                    if (addDisplayMethod is null) continue;
+
+                    addDisplayMethod.Invoke(mainPage, [display.Title, display.Binding, display.Position, display.Dimensions]);
+                }
+            }
+        }
+
+        [Serializable]
+        public record LayoutData(List<DisplayData> Displays);
+
+        [Serializable]
+        public record DisplayData(string? DisplayType, string Title, string Binding, GridPos Position, GridDims Dimensions);
     }
 }
