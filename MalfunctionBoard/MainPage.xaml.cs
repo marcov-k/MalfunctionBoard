@@ -2,6 +2,7 @@
 {
     using Microsoft.Maui.Devices;
     using Microsoft.Maui.Layouts;
+    using System.Formats.Tar;
     using System.Reflection;
     using System.Runtime.InteropServices;
     using static MalfunctionBoard.MainPage;
@@ -123,7 +124,7 @@
         {
             T display = new() { MyPage = this, Title = title, Binding = binding };
 
-            if (!DisplayBindings.Any(b => b.Binding == binding) && ValidPosition(dimensions, position, out var positions))
+            if (ValidBinding(binding) && ValidPosition(dimensions, position, out var positions))
             {
                 GridDisplays.AddRange(positions.Select(p => new GridDisplay(p, display)));
 
@@ -145,10 +146,7 @@
 
         public bool TryChangeDisplay(DashboardDisplay display, string newTitle, string newBinding, GridPos newPos, GridDims newDims)
         {
-            var newPositions = GridDisplays.Where(d => d.Display != display).ToList();
-            var newBindings = DisplayBindings.Where(b => b.Display != display).ToList();
-
-            if (!newBindings.Any(b => b.Binding == newBinding) && ValidPosition(newDims, newPos, out var positions, newPositions))
+            if (ValidBinding(newBinding, display) && ValidPosition(newDims, newPos, out var positions, display))
             {
                 DisplayBindings.RemoveAll(b => b.Display == display);
                 DisplayBindings.Add(new(newBinding, display));
@@ -181,9 +179,9 @@
             MainGrid.Remove(display);
         }
 
-        public bool ValidPosition(GridDims dimensions, GridPos start, out List<GridPos> positions, List<GridDisplay>? gridDisplays = null)
+        public bool ValidPosition(GridDims dimensions, GridPos start, out List<GridPos> positions, DashboardDisplay? display = null)
         {
-            gridDisplays ??= GridDisplays;
+            var gridDisplays = GridDisplays.Where(d => d.Display != display);
             positions = [];
 
             for (int row = 0; row < dimensions.Height; row++)
@@ -201,6 +199,8 @@
 
             return true;
         }
+
+        public bool ValidBinding(string binding, DashboardDisplay? display = null) => !DisplayBindings.Any(b => b.Binding == binding && b.Display != display);
 
         void InitDisplayTypes()
         {
@@ -468,46 +468,8 @@
             var propertiesWindow = new Window(new PropertiesPage(displayType, mainPage, display));
             Application.Current?.OpenWindow(propertiesWindow);
 
-            #if WINDOWS
-                var main = mainPage.Window.Handler.PlatformView as Microsoft.UI.Xaml.Window;
-                var properties = propertiesWindow.Handler.PlatformView as Microsoft.UI.Xaml.Window;
-
-                if (main != null && properties != null)
-                {
-                    IntPtr mainHwnd = WinRT.Interop.WindowNative.GetWindowHandle(main);
-                    IntPtr propertiesHwnd = WinRT.Interop.WindowNative.GetWindowHandle(properties);
-
-                    const int GWL_HWNDPARENT = -8;
-                    if (IntPtr.Size == 8)
-                    {
-                        SetWindowLongPtr64(propertiesHwnd, GWL_HWNDPARENT, mainHwnd);
-                    }
-                    else
-                    {
-                        SetWindowLong32(propertiesHwnd, GWL_HWNDPARENT, mainHwnd.ToInt32());
-                    }
-
-                    var subAppWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(propertiesHwnd));
-                    var presenter = Microsoft.UI.Windowing.OverlappedPresenter.CreateForDialog();
-                    presenter.IsModal = true;
-                    subAppWindow.SetPresenter(presenter);
-
-                    properties.Closed += (_, _) => SetForegroundWindow(mainHwnd);
-                }
-            #endif
+            WindowUtils.MakeModalWindow(propertiesWindow, mainPage.Window);
         }
-
-        #if WINDOWS
-        [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
-        private static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
-        private static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-        #endif
 
         public PropertiesPage(Type displayType, MainPage mainPage, DashboardDisplay? display = null)
         {
@@ -561,7 +523,7 @@
             };
             posEntry.SetBinding(Vector2InputField<GridPos>.VectorProperty, new Binding(nameof(DisplayPosition),
                 mode: BindingMode.TwoWay, source: this));
-            if (ShownDisplay is not null) (posEntry.FirstInput, posEntry.SecondInput) = (ShownDisplay.Position.X.ToString(), ShownDisplay.Position.Y.ToString());
+            (posEntry.FirstInput, posEntry.SecondInput) = ShownDisplay is null ? ("0", "0") : (ShownDisplay.Position.X.ToString(), ShownDisplay.Position.Y.ToString());
             pageLayout.Add(posEntry);
 
             var dimsEntry = new Vector2InputField<GridDims>()
@@ -654,10 +616,10 @@
             Window.Title = Title;
             (Window.Width, Window.Height) = (WindowWidth, WindowHeight);
 
-#if MACCATALYST
+            #if MACCATALYST
             (Window.MinimumWidth, Window.MaximumWidth) = (WindowWidth, WindowWidth);
             (Window.MinimumHeight, Window.MaximumHeight) = (WindowHeight, WindowHeight);
-#endif
+            #endif
 
             var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
 
@@ -673,27 +635,123 @@
 
         void Confirm()
         {
-            if (string.IsNullOrEmpty(DisplayTitle)) return;
-            if (string.IsNullOrEmpty(DisplayBinding)) return;
-
-            if (DisplayPosition is null || DisplayDimensions is null) return;
-
-            dynamic? success;
-            if (ShownDisplay is null) success = AddDisplayMethod?.Invoke(MainPage, [DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions]);
-            else success = MainPage.TryChangeDisplay(ShownDisplay, DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions);
+            dynamic? success = false;
+            if (!string.IsNullOrEmpty(DisplayTitle) && !string.IsNullOrEmpty(DisplayBinding) && DisplayPosition is not null && DisplayDimensions is not null)
+            {
+                if (ShownDisplay is null) success = AddDisplayMethod?.Invoke(MainPage, [DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions]);
+                else success = MainPage.TryChangeDisplay(ShownDisplay, DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions);
+            }
 
             if (success is not null && success) Close();
+            else
+            {
+                string warning = string.Empty;
+
+                if (string.IsNullOrEmpty(DisplayTitle)) warning = "Missing Display Title";
+                else if (string.IsNullOrEmpty(DisplayBinding)) warning = "Missing Display Binding";
+                else if (!MainPage.ValidBinding(DisplayBinding, ShownDisplay)) warning = "Invalid Binding - binding already exists";
+                else if (DisplayPosition is null) warning = "Missing Display Position";
+                else if (DisplayDimensions is null) warning = "Missing Display Dimensions";
+                else if (!MainPage.ValidPosition(DisplayDimensions, DisplayPosition, out _, ShownDisplay)) warning = "Invalid Position - position already occupied";
+
+                WarningPage.ShowWarning(warning, Window);
+            }
         }
 
         void Delete()
         {
-            if (ShownDisplay is null) return;
-
-            MainPage.RemoveDisplay(ShownDisplay);
+            if (ShownDisplay is not null) MainPage.RemoveDisplay(ShownDisplay);
             Close();
         }
 
         void Close() => Application.Current?.CloseWindow(Window);
+
+        public partial class WarningPage : ContentPage
+        {
+            const double WindowWidth = 400;
+            const double WindowHeight = 200;
+            const double WarningTextSize = 30;
+            const double ButtonWidth = 100;
+
+            public static void ShowWarning(string warning, Window propertiesWindow)
+            {
+                var warningWindow = new Window(new WarningPage(warning));
+                Application.Current?.OpenWindow(warningWindow);
+
+                WindowUtils.MakeModalWindow(warningWindow, propertiesWindow);
+            }
+
+            public WarningPage(string warning)
+            {
+                Title = "Warning";
+                BackgroundColor = WindowColor;
+
+                VerticalStackLayout pageLayout = new()
+                {
+                    Spacing = VerticalSpacing,
+                    Margin = Margin,
+                    HorizontalOptions = LayoutOptions.Fill,
+                    VerticalOptions = LayoutOptions.Center
+                };
+
+                var warningLabel = new Label()
+                {
+                    Text = warning,
+                    FontSize = WarningTextSize,
+                    HorizontalTextAlignment = TextAlignment.Center,
+                    HorizontalOptions = LayoutOptions.Center,
+                    VerticalOptions = LayoutOptions.Fill
+                };
+                pageLayout.Add(warningLabel);
+
+                Button closeButton = new()
+                {
+                    Text = "Ok",
+                    FontSize = TextSize,
+                    BackgroundColor = ConfirmColor,
+                    HorizontalOptions = LayoutOptions.Center,
+                    WidthRequest = ButtonWidth,
+                    VerticalOptions = LayoutOptions.Fill
+                };
+
+                PointerGestureRecognizer closeGesture = new();
+                closeGesture.PointerEntered += (_, _) => closeButton.BackgroundColor = ConfirmHoverColor;
+                closeGesture.PointerExited += (_, _) => closeButton.BackgroundColor = ConfirmColor;
+
+                closeButton.GestureRecognizers.Add(closeGesture);
+                closeButton.Clicked += (_, _) => Close();
+
+                pageLayout.Add(closeButton);
+
+                Content = pageLayout;
+
+                Loaded += OnPageLoaded;
+            }
+
+            void OnPageLoaded(object? sender, EventArgs e)
+            {
+                Window.Title = Title;
+                (Window.Width, Window.Height) = (WindowWidth, WindowHeight);
+
+                #if MACCATALYST
+                (Window.MinimumWidth, Window.MaximumWidth) = (WindowWidth, WindowWidth);
+                (Window.MinimumHeight, Window.MaximumHeight) = (WindowHeight, WindowHeight);
+                #endif
+
+                var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
+
+                if (displayInfo.Density > 0)
+                {
+                    double screenWidth = displayInfo.Width / displayInfo.Density;
+                    double screenHeight = displayInfo.Height / displayInfo.Density;
+
+                    Window.X = (screenWidth / 2) - (WindowWidth / 2);
+                    Window.Y = (screenHeight / 2) - (WindowHeight / 2);
+                }
+            }
+
+            void Close() => Application.Current?.CloseWindow(Window);
+        }
 
         public partial class InputField : ContentView
         {
@@ -873,5 +931,51 @@
                 }
             }
         }
+    }
+
+    public static class WindowUtils
+    {
+        public static void MakeModalWindow(Window subWindow, Window mainWindow)
+        {
+            #if WINDOWS
+            var main = mainWindow.Handler.PlatformView as Microsoft.UI.Xaml.Window;
+            var sub = subWindow.Handler.PlatformView as Microsoft.UI.Xaml.Window;
+
+            if (main != null && sub != null)
+            {
+                IntPtr mainHwnd = WinRT.Interop.WindowNative.GetWindowHandle(main);
+                IntPtr subHwnd = WinRT.Interop.WindowNative.GetWindowHandle(sub);
+
+                const int GWL_HWNDPARENT = -8;
+                if (IntPtr.Size == 8)
+                {
+                    SetWindowLongPtr64(subHwnd, GWL_HWNDPARENT, mainHwnd);
+                }
+                else
+                {
+                    SetWindowLong32(subHwnd, GWL_HWNDPARENT, mainHwnd.ToInt32());
+                }
+
+                var subAppWindow = Microsoft.UI.Windowing.AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(subHwnd));
+                var presenter = Microsoft.UI.Windowing.OverlappedPresenter.CreateForDialog();
+                presenter.IsModal = true;
+                subAppWindow.SetPresenter(presenter);
+
+                sub.Closed += (_, _) => SetForegroundWindow(mainHwnd);
+            }
+            #endif
+        }
+
+        #if WINDOWS
+        [DllImport("user32.dll", EntryPoint = "SetWindowLong")]
+        static extern int SetWindowLong32(IntPtr hWnd, int nIndex, int dwNewLong);
+
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+        static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+        #endif
     }
 }
