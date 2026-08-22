@@ -226,10 +226,7 @@
             var displayTypes = typeof(DashboardDisplay).Assembly.GetTypes()
                 .Where(t => t.IsSubclassOf(typeof(DashboardDisplay)) && t.IsAssignableTo(typeof(ICreatable)));
 
-            foreach (var displayType in displayTypes)
-            {
-                DisplayTypes.Add(displayType);
-            }
+            DisplayTypes.AddRange(displayTypes);
         }
     }
 }
