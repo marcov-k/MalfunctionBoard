@@ -26,7 +26,7 @@ namespace MalfunctionBoard.Utilities
         {
             Table = NetworkTableInstance.Default.GetTable(TableName);
 
-            Table?.AddEntryListener((tbl, key, in entry, in value, flags) =>
+            Table.AddEntryListener((tbl, key, in entry, in value, flags) =>
             {
                 var binding = key.ToString();
                 var data = entry.GetObjectValue();
