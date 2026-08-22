@@ -1,4 +1,5 @@
-﻿using MalfunctionBoard.Records.Displays;
+﻿using MalfunctionBoard.Records;
+using MalfunctionBoard.Records.Displays;
 using MalfunctionBoard.Records.GridData;
 using System.Text.Json;
 
@@ -20,7 +21,8 @@ namespace MalfunctionBoard.Utilities
             }
 
             LayoutData layoutData = new(displayData);
-            string jsonData = JsonSerializer.Serialize(layoutData, SerializerOptions);
+            SaveData saveData = new(layoutData, NetworkTableReader.TableName);
+            string jsonData = JsonSerializer.Serialize(saveData, SerializerOptions);
             File.WriteAllText(FileName, jsonData);
         }
 
@@ -29,10 +31,12 @@ namespace MalfunctionBoard.Utilities
             if (!File.Exists(FileName)) return;
 
             string jsonData = File.ReadAllText(FileName);
-            var layoutData = JsonSerializer.Deserialize<LayoutData>(jsonData);
+            var saveData = JsonSerializer.Deserialize<SaveData>(jsonData);
 
-            if (layoutData is not null)
+            if (saveData is not null)
             {
+                var layoutData = saveData.Layout;
+
                 foreach (var display in layoutData.Displays)
                 {
                     if (display.DisplayType is null) continue;
@@ -46,6 +50,8 @@ namespace MalfunctionBoard.Utilities
 
                     addDisplayMethod.Invoke(mainPage, [display.Title, display.Binding, display.Position, display.Dimensions]);
                 }
+
+                NetworkTableReader.TableName = saveData.TableName;
             }
         }
     }

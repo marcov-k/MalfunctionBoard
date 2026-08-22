@@ -127,7 +127,7 @@
             instance.StartServer();
             instance.GetTable(TableName).GetEntry("test").SetDouble(5.5);
 
-            NetworkTableReader.StartReader(TableName, this);
+            NetworkTableReader.InitReader(this);
         }
 
         public bool TryAddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
