@@ -243,13 +243,6 @@ namespace MalfunctionBoard.SubPages
                 Saver.SaveLayout(MainPage);
                 Close();
             }
-            catch (TargetInvocationException e)
-            {
-                if (e.InnerException is not null)
-                {
-                    WarningPage.ShowWarning(FormatWarning(e.InnerException), Window);
-                }
-            }
             catch (Exception e)
             {
                 WarningPage.ShowWarning(FormatWarning(e), Window);
