@@ -1,4 +1,5 @@
 ﻿using MalfunctionBoard.Displays;
+using MalfunctionBoard.Exceptions;
 using MalfunctionBoard.InputFields;
 using MalfunctionBoard.Records.GridData;
 using MalfunctionBoard.Utilities;
@@ -51,7 +52,7 @@ namespace MalfunctionBoard.SubPages
             BindableProperty.Create(nameof(DisplayDimensions), typeof(GridDims), typeof(PropertiesPage), new GridDims());
         readonly MainPage MainPage;
         readonly DashboardDisplay? ShownDisplay;
-        readonly MethodInfo? AddDisplayMethod;
+        readonly AddDisplayAction? AddDisplayMethod;
 
         public static void OpenPropertiesPage(Type displayType, MainPage mainPage, DashboardDisplay? display = null)
         {
@@ -195,8 +196,12 @@ namespace MalfunctionBoard.SubPages
 
             Content = pageLayout;
 
-            var tryAddInfo = typeof(MainPage).GetMethod("TryAddDisplay");
-            AddDisplayMethod = tryAddInfo?.MakeGenericMethod(displayType);
+            if (ShownDisplay is null)
+            {
+                var addInfo = typeof(MainPage).GetMethod("AddDisplay");
+                var genericAddInfo = addInfo?.MakeGenericMethod(displayType);
+                AddDisplayMethod = (AddDisplayAction)Delegate.CreateDelegate(typeof(AddDisplayAction), MainPage, genericAddInfo!);
+            }
 
             Loaded += OnPageLoaded;
         }
@@ -206,10 +211,10 @@ namespace MalfunctionBoard.SubPages
             Window.Title = Title;
             (Window.Width, Window.Height) = (WindowWidth, WindowHeight);
 
-#if MACCATALYST
+            #if MACCATALYST
             (Window.MinimumWidth, Window.MaximumWidth) = (WindowWidth, WindowWidth);
             (Window.MinimumHeight, Window.MaximumHeight) = (WindowHeight, WindowHeight);
-#endif
+            #endif
 
             var displayInfo = DeviceDisplay.Current.MainDisplayInfo;
 
@@ -225,30 +230,29 @@ namespace MalfunctionBoard.SubPages
 
         void Confirm()
         {
-            dynamic? success = false;
-            if (!string.IsNullOrEmpty(DisplayTitle) && !string.IsNullOrEmpty(DisplayBinding) && DisplayPosition is not null && DisplayDimensions is not null)
+            try
             {
-                if (ShownDisplay is null) success = AddDisplayMethod?.Invoke(MainPage, [DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions]);
-                else success = MainPage.TryChangeDisplay(ShownDisplay, DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions);
-            }
+                if (string.IsNullOrEmpty(DisplayTitle)) throw new MissingPropertyException("Title");
+                if (string.IsNullOrEmpty(DisplayBinding)) throw new MissingPropertyException("Binding");
+                if (DisplayPosition is null) throw new MissingPropertyException("Position");
+                if (DisplayDimensions is null) throw new MissingPropertyException("Dimensions");
 
-            if (success is not null && success)
-            {
+                if (ShownDisplay is null) AddDisplayMethod!(DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions);
+                else MainPage.ChangeDisplay(ShownDisplay, DisplayTitle, DisplayBinding, DisplayPosition, DisplayDimensions);
+
                 Saver.SaveLayout(MainPage);
                 Close();
             }
-            else
+            catch (TargetInvocationException e)
             {
-                string warning = string.Empty;
-
-                if (string.IsNullOrEmpty(DisplayTitle)) warning = "Missing Display Title";
-                else if (string.IsNullOrEmpty(DisplayBinding)) warning = "Missing Display Binding";
-                else if (!MainPage.ValidBinding(DisplayBinding, ShownDisplay)) warning = "Invalid Binding - binding already exists";
-                else if (DisplayPosition is null) warning = "Missing Display Position";
-                else if (DisplayDimensions is null) warning = "Missing Display Dimensions";
-                else if (!MainPage.ValidPosition(DisplayDimensions, DisplayPosition, out _, ShownDisplay)) warning = "Invalid Position - position already occupied";
-
-                WarningPage.ShowWarning(warning, Window);
+                if (e.InnerException is not null)
+                {
+                    WarningPage.ShowWarning(FormatWarning(e.InnerException), Window);
+                }
+            }
+            catch (Exception e)
+            {
+                WarningPage.ShowWarning(FormatWarning(e), Window);
             }
         }
 
@@ -263,5 +267,7 @@ namespace MalfunctionBoard.SubPages
         }
 
         void Close() => Application.Current?.CloseWindow(Window);
+
+        string FormatWarning(Exception e) => (ShownDisplay is null ? "Could Not Add Display" : "Could Not Update Display") + $"\n({e.Message})";
     }
 }

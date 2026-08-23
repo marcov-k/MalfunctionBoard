@@ -44,11 +44,19 @@ namespace MalfunctionBoard.Utilities
                     var displayType = Type.GetType(display.DisplayType);
                     if (displayType is null) continue;
 
-                    var tryAddInfo = typeof(MainPage).GetMethod("TryAddDisplay");
-                    var addDisplayMethod = tryAddInfo?.MakeGenericMethod(displayType);
+                    var addInfo = typeof(MainPage).GetMethod("AddDisplay");
+                    if (addInfo is null) continue;
+
+                    var genericAddInfo = addInfo.MakeGenericMethod(displayType);
+
+                    var addDisplayMethod = (AddDisplayAction)Delegate.CreateDelegate(typeof(AddDisplayAction), mainPage, genericAddInfo);
                     if (addDisplayMethod is null) continue;
 
-                    addDisplayMethod.Invoke(mainPage, [display.Title, display.Binding, display.Position, display.Dimensions]);
+                    try
+                    {
+                        addDisplayMethod(display.Title, display.Binding, display.Position, display.Dimensions);
+                    }
+                    catch (Exception) { }
                 }
 
                 NetworkTableReader.TableName = saveData.TableName;

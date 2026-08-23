@@ -4,10 +4,11 @@ namespace MalfunctionBoard.SubPages
 {
     public partial class WarningPage : ContentPage
     {
-        const double WindowWidth = 400;
-        const double WindowHeight = 200;
-        const double WarningTextSize = 30;
+        const double WindowWidth = 600;
+        const double WindowHeight = 250;
+        const double WarningTextSize = 25;
         const double ButtonWidth = 100;
+        static readonly Color WarningTextColor = Colors.DarkRed;
 
         public static void ShowWarning(string warning, Window propertiesWindow)
         {
@@ -34,6 +35,8 @@ namespace MalfunctionBoard.SubPages
             {
                 Text = warning,
                 FontSize = WarningTextSize,
+                TextColor = WarningTextColor,
+                FontAttributes = FontAttributes.Bold,
                 HorizontalTextAlignment = TextAlignment.Center,
                 HorizontalOptions = LayoutOptions.Center,
                 VerticalOptions = LayoutOptions.Fill

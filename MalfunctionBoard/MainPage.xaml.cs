@@ -3,6 +3,7 @@
     using FRC.NetworkTables;
     using MalfunctionBoard.Buttons;
     using MalfunctionBoard.Displays;
+    using MalfunctionBoard.Exceptions;
     using MalfunctionBoard.Interfaces;
     using MalfunctionBoard.Records.Displays;
     using MalfunctionBoard.Records.GridData;
@@ -130,13 +131,14 @@
             NetworkTableReader.InitReader(this);
         }
 
-        public bool TryAddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
+        public void AddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
             where T : DashboardDisplay, IHasGridDims, IHasGridPos, new()
         {
-            T display = new() { MyPage = this, Title = title, Binding = binding };
+            if (!ValidBinding(binding)) throw new InvalidBindingException(binding);
 
-            if (ValidBinding(binding) && ValidPosition(dimensions, position, out var positions))
+            if (ValidPosition(dimensions, position, out var positions))
             {
+                T display = new() { MyPage = this, Title = title, Binding = binding };
                 GridDisplays.AddRange(positions.Select(p => new GridDisplay(p, display)));
 
                 display.Position = positions[0];
@@ -149,13 +151,11 @@
                 DisplayBindings.Add(new(binding, display));
 
                 MainGrid.Add(display);
-                return true;
             }
-
-            return false;
+            else throw new InvalidPositionException(position, dimensions);
         }
 
-        public bool TryChangeDisplay(DashboardDisplay display, string newTitle, string newBinding, GridPos newPos, GridDims newDims)
+        public void ChangeDisplay(DashboardDisplay display, string newTitle, string newBinding, GridPos newPos, GridDims newDims)
         {
             if (ValidBinding(newBinding, display) && ValidPosition(newDims, newPos, out var positions, display))
             {
@@ -177,10 +177,7 @@
                 MainGrid.SetColumnSpan(display, newDims.Width);
 
                 MainGrid.Add(display);
-                return true;
             }
-
-            return false;
         }
 
         public void UpdateDisplay(string binding, object? data)

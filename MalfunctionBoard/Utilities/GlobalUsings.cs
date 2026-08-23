@@ -1,0 +1,1 @@
+﻿global using AddDisplayAction = System.Action<string, string, MalfunctionBoard.Records.GridData.GridPos, MalfunctionBoard.Records.GridData.GridDims>;
