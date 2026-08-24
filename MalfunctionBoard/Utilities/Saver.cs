@@ -1,6 +1,8 @@
-﻿using MalfunctionBoard.Records;
+﻿using MalfunctionBoard.Exceptions;
+using MalfunctionBoard.Records;
 using MalfunctionBoard.Records.Displays;
 using MalfunctionBoard.Records.GridData;
+using MalfunctionBoard.SubPages;
 using System.Text.Json;
 
 namespace MalfunctionBoard.Utilities
@@ -33,34 +35,39 @@ namespace MalfunctionBoard.Utilities
             string jsonData = File.ReadAllText(FileName);
             var saveData = JsonSerializer.Deserialize<SaveData>(jsonData);
 
+            bool incompleteLoading = false;
             if (saveData is not null)
             {
                 var layoutData = saveData.Layout;
 
                 foreach (var display in layoutData.Displays)
                 {
-                    if (display.DisplayType is null) continue;
-
-                    var displayType = Type.GetType(display.DisplayType);
-                    if (displayType is null) continue;
-
-                    var addInfo = typeof(MainPage).GetMethod("AddDisplay");
-                    if (addInfo is null) continue;
-
-                    var genericAddInfo = addInfo.MakeGenericMethod(displayType);
-
-                    var addDisplayMethod = (AddDisplayAction)Delegate.CreateDelegate(typeof(AddDisplayAction), mainPage, genericAddInfo);
-                    if (addDisplayMethod is null) continue;
-
                     try
                     {
+                        if (display.DisplayType is null) throw new DisplayLoadingException();
+
+                        var displayType = Type.GetType(display.DisplayType) ?? throw new DisplayLoadingException();
+
+                        var addInfo = typeof(MainPage).GetMethod("AddDisplay") ?? throw new DisplayLoadingException();
+
+                        var genericAddInfo = addInfo.MakeGenericMethod(displayType);
+
+                        var addDisplayMethod = (AddDisplayAction)Delegate.CreateDelegate(typeof(AddDisplayAction), mainPage, genericAddInfo)
+                            ?? throw new DisplayLoadingException();
+
                         addDisplayMethod(display.Title, display.Binding, display.Position, display.Dimensions);
                     }
-                    catch (Exception) { }
+                    catch (Exception)
+                    {
+                        incompleteLoading = true;
+                    }
                 }
 
                 NetworkTableReader.TableName = saveData.TableName;
             }
+            else WarningPage.ShowWarning("Failed To Load Previous Layout", mainPage.Window);
+
+            if (incompleteLoading) WarningPage.ShowWarning("Could Not Fully Load Previous Layout", mainPage.Window);
         }
     }
 }

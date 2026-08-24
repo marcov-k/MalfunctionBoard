@@ -10,12 +10,12 @@ namespace MalfunctionBoard.SubPages
         const double ButtonWidth = 100;
         static readonly Color WarningTextColor = Colors.DarkRed;
 
-        public static void ShowWarning(string warning, Window propertiesWindow)
+        public static void ShowWarning(string warning, Window parentWindow)
         {
             var warningWindow = new Window(new WarningPage(warning));
             Application.Current?.OpenWindow(warningWindow);
 
-            WindowUtils.MakeModalWindow(warningWindow, propertiesWindow);
+            WindowUtils.MakeModalWindow(warningWindow, parentWindow);
         }
 
         public WarningPage(string warning)
