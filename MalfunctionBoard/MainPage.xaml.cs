@@ -7,6 +7,7 @@
     using MalfunctionBoard.Interfaces;
     using MalfunctionBoard.Records.Displays;
     using MalfunctionBoard.Records.GridData;
+    using MalfunctionBoard.SubPages;
     using MalfunctionBoard.Utilities;
     using Microsoft.Maui.Devices;
 
@@ -23,9 +24,14 @@
         static readonly Thickness GridMargin = new(10);
         const double AddButtonSpacing = 0;
         static readonly Thickness AddButtonMargin = new(10);
+        const double SettingsTextSize = 27.5;
+        static readonly Thickness SettingsButtonMargin = new(10, 0, 0, 10);
         internal static readonly Color CellColor = Colors.Gray;
         static readonly Color GridColor = Colors.LightGray;
         static readonly Color PageColor = Colors.DarkGray;
+        static readonly Color SettingsColor = Colors.DarkBlue;
+        static readonly Color SettingsHoverColor = Colors.Blue;
+        const double SettingsButtonWidth = 150;
         const string TableName = "datatable";
 
         public MainPage()
@@ -39,7 +45,8 @@
                 RowDefinitions =
                 {
                     new() { Height = new(1, GridUnitType.Star) },
-                    new() { Height = new(10, GridUnitType.Star) }
+                    new() { Height = new(10, GridUnitType.Star) },
+                    new() { Height = new(0.75, GridUnitType.Star) }
                 },
                 ColumnDefinitions =
                 {
@@ -94,8 +101,27 @@
                 });
             }
 
+            Button settingsButton = new()
+            {
+                Text = "Settings",
+                FontSize = SettingsTextSize,
+                BackgroundColor = SettingsColor,
+                Margin = SettingsButtonMargin,
+                HorizontalOptions = LayoutOptions.Start,
+                WidthRequest = SettingsButtonWidth,
+                VerticalOptions = LayoutOptions.Fill
+            };
+
+            PointerGestureRecognizer settingsGesture = new();
+            settingsGesture.PointerEntered += (_, _) => settingsButton.BackgroundColor = SettingsHoverColor;
+            settingsGesture.PointerExited += (_, _) => settingsButton.BackgroundColor = SettingsColor;
+
+            settingsButton.GestureRecognizers.Add(settingsGesture);
+            settingsButton.Clicked += (_, _) => SettingsPage.OpenSettings(Window, this);
+
             pageLayout.Add(topBar, 0, 0);
             pageLayout.Add(MainGrid, 0, 1);
+            pageLayout.Add(settingsButton, 0, 2);
             Content = pageLayout;
 
             Loaded += OnPageLoaded;

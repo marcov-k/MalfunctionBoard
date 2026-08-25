@@ -84,8 +84,8 @@ namespace MalfunctionBoard.SubPages
                 double screenWidth = displayInfo.Width / displayInfo.Density;
                 double screenHeight = displayInfo.Height / displayInfo.Density;
 
-                Window.X = (screenWidth / 2) - (WindowWidth / 2);
-                Window.Y = (screenHeight / 2) - (WindowHeight / 2);
+                Window.X = (screenWidth - WindowWidth) / 2;
+                Window.Y = (screenHeight - WindowHeight) / 2;
             }
         }
 
