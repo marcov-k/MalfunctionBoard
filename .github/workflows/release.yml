@@ -20,7 +20,7 @@ jobs:
         uses: microsoft/setup-msbuild@v2
 
       - name: Build Release
-        shell: pws
+        shell: pwsh
         run: |
           msbuild MalfunctionBoard/MalfunctionBoard.slnx `
             /p:Configuration=Release `
