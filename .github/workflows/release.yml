@@ -10,60 +10,131 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-2025-vs2026
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target-framework: net10.0-windows10.0.19041.0
+            rid: win-x64
+            asset-suffix: win
+
+          - os: macos-latest
+            target-framework: net10.0-maccatalyst
+            rid: maccatalyst-arm64
+            asset-suffix: mac-arm64
+
+          - os: macos-latest
+            target-framework: net10.0-maccatalyst
+            rid: maccatalyst-x64
+            asset-suffix: mac-x64
+            
+            
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          nuget-version: 'latest'
+          dotnet-version: 10.0.x
 
-      - name: Restore NuGet packages
-        run: nuget restore MalfunctionBoard/MalfunctionBoard.slnx
+      - name: Install MAUI workload
+        run: dotnet workload install maui
 
-      - name: Build Release
-        shell: pwsh
-        run: |
-          msbuild MalfunctionBoard/MalfunctionBoard.slnx `
-            /p:Configuration=Release
+      - name: Publish
+        run: >
+          dotnet publish
+          MalfunctionBoard/MalfunctionBoard.csproj
+          -c Release
+          -f ${{ matrix.target-framework }}
+          -r ${{ matrix.rid }}
+          --self-contained true
+          -o publish
 
-      - name: Locate build outputs
-        id: outputs
-        shell: pwsh
-        run: |
-          $Windows = (Get-ChildItem "MalfunctionBoard/MalfunctionBoard" -Recurse -Filter net10.0-windows10.0.19041.0/ |
-            Select-Object -First 1).FullName
-          echo "WINBUILD=$Windows" >> $env:GITHUB_OUTPUT
-
-      - name: Prepare release zips
+      - name: Package Windows
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $Version = "${{ github.ref_name }}"
-          New-Item -ItemType Directory -Force release/MalfunctionBoard/Runtime | Out-Null
-          Copy-Item "${{ steps.outputs.WINBUILD }}"  release/MalfunctionBoard/Runtime/
-          Copy-Item $env:GITHUB_WORKSPACE/LICENSE.txt release/
-          
+          $Package = "release/MalfunctionBoard"
+
+          New-Item -ItemType Directory -Force $Package | Out-Null
+
+          Copy-Item "publish/*" $Package -Recurse -Force
+          Copy-Item "$env:GITHUB_WORKSPACE/LICENSE.txt" "release/"
+
+          $TargetFile = Join-Path $Package "MalfunctionBoard.exe"
+          $ShortcutFile = "release/MalfunctionBoard.lnk"
+
           $WScriptShell = New-Object -ComObject WScript.Shell
-          $ShortcutFile = "release/MalfunctionBoard/MalfunctionBoard.lnk"
-          $TargetFile = (Get-ChildItem "release/MalfunctionBoard/Runtime" -Recurse -Filter MalfunctionBoard.exe |
-            Select-Object -First 1).FullName
           $Shortcut = $WScriptShell.CreateShortcut($ShortcutFile)
           $Shortcut.TargetPath = $TargetFile
+          $Shortcut.WorkingDirectory = $Package
           $Shortcut.Save()
 
-          Compress-Archive -Path release/* -DestinationPath "MalfunctionBoard-$Version-win.zip"
+          Compress-Archive `
+            -Path "release/MalfunctionBoard", "release/LICENSE.txt", "release/MalfunctionBoard.lnk" `
+            -DestinationPath "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.zip" `
+            -Force
+
+      - name: Package Mac Catalyst
+        if: runner.os == 'macOS'
+        shell: pwsh
+        run: |
+          $Version = "${{ github.ref_name }}"
+          $Package = "release/MalfunctionBoard"
+
+          New-Item -ItemType Directory -Force $Package | Out-Null
+
+          $App = Get-ChildItem "publish" -Directory -Filter "*.app" |
+            Select-Object -First 1
+
+          if (-not $App)
+          {
+            throw "No .app bundle in publish/"
+          }
+
+          Copy-Item $App.FullName $Package -Recurse -Force
+          Copy-Item "$env:GITHUB_WORKSPACE/LICENSE.txt" "release/"
+
+          Compress-Archive `
+            -Path "release/MalfunctionBoard", "release/LICENSE.txt" `
+            -DestinationPath "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.zip" `
+            -Force
+
+      - name: Upload release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: MalfunctionBoard-${{ matrix.asset-suffix }}
+          path: MalfunctionBoard-${{ github.ref_name }}-${{ matrix.asset-suffix }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download release packages
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+
+      - name: Show downloaded files
+        run: find release -type f
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.ref_name }}
+          name: MalfunctionBoard ${{ github.ref_name }}
+          generate_release_notes: true
           files: |
-            MalfunctionBoard-${{ github.ref_name }}-win.zip
+            release/**/MalfunctionBoard-${{ github.ref_name }}-win.zip
+            release/**/MalfunctionBoard-${{ github.ref_name }}-mac-arm64.zip
+            release/**/MalfunctionBoard-${{ github.ref_name }}-mac-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
