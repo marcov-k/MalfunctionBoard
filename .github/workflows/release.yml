@@ -19,6 +19,14 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
+        with:
+          nuget-version: 'latest'
+
+      - name: Restore NuGet packages
+        run: nuget restore MalfunctionBoard/MalfunctionBoard.slnx
+
       - name: Build Release
         shell: pwsh
         run: |
