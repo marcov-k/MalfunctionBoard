@@ -24,7 +24,7 @@ jobs:
         run: |
           msbuild MalfunctionBoard/MalfunctionBoard.slnx `
             /p:Configuration=Release `
-            /p:Platform=AnyCPU
+            /p:Platform=Any CPU
 
       - name: Locate build outputs
         id: outputs
