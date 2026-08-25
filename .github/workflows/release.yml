@@ -1,0 +1,62 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2025-vs2026
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Release
+        shell: pws
+        run: |
+          msbuild MalfunctionBoard/MalfunctionBoard.slnx `
+            /p:Configuration=Release `
+            /p:Platform=AnyCPU
+
+      - name: Locate build outputs
+        id: outputs
+        shell: pwsh
+        run: |
+          $Windows = (Get-ChildItem "MalfunctionBoard/MalfunctionBoard" -Recurse -Filter net10.0-windows10.0.19041.0/ |
+            Select-Object -First 1).FullName
+          echo "WINBUILD=$Windows" >> $env:GITHUB_OUTPUT
+
+      - name: Prepare release zips
+        shell: pwsh
+        run: |
+          $Version = "${{ github.ref_name }}"
+          New-Item -ItemType Directory -Force release/MalfunctionBoard/Runtime | Out-Null
+          Copy-Item "${{ steps.outputs.WINBUILD }}"  release/MalfunctionBoard/Runtime/
+          Copy-Item $env:GITHUB_WORKSPACE/LICENSE.txt release/
+          
+          $WScriptShell = New-Object -ComObject WScript.Shell
+          $ShortcutFile = "release/MalfunctionBoard/MalfunctionBoard.lnk"
+          $TargetFile = (Get-ChildItem "release/MalfunctionBoard/Runtime" -Recurse -Filter MalfunctionBoard.exe |
+            Select-Object -First 1).FullName
+          $Shortcut = $WScriptShell.CreateShortcut($ShortcutFile)
+          $Shortcut.TargetPath = $TargetFile
+          $Shortcut.Save()
+
+          Compress-Archive -Path release/* -DestinationPath "MalfunctionBoard-$Version-win.zip"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            MalfunctionBoard-${{ github.ref_name }}-win.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
