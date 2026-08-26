@@ -51,6 +51,7 @@ jobs:
           -f ${{ matrix.target-framework }}
           -r ${{ matrix.rid }}
           --self-contained true
+          -p:CreateAppBundle=true
           -o publish
 
       - name: Package Windows
@@ -88,13 +89,18 @@ jobs:
 
           New-Item -ItemType Directory -Force $Package | Out-Null
 
-          $App = Get-ChildItem "publish" -Directory -Filter "*.app" |
+          $App = Get-ChildItem "publish" -Recurse -Directory -Filter "*.app" |
             Select-Object -First 1
 
           if (-not $App)
           {
-            throw "No .app bundle in publish/"
+            Write-Host "Contents of publish:"
+            Get-ChildItem "publish" -Recurse
+
+            throw "No .app bundle found anywhere under publish/"
           }
+
+          Write-Host "Found app bundle: $($App.FullName)"
 
           Copy-Item $App.FullName $Package -Recurse -Force
           Copy-Item "$env:GITHUB_WORKSPACE/LICENSE.txt" "release/"
