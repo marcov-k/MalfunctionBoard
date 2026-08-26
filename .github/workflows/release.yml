@@ -89,32 +89,26 @@ jobs:
 
           New-Item -ItemType Directory -Force $Package | Out-Null
 
-          $App = Get-ChildItem "publish" -Recurse -Directory -Filter "*.app" |
+          $Pkg = Get-ChildItem "publish" -Recurse -Directory -Filter "*.pkg" |
             Select-Object -First 1
 
-          if (-not $App)
+          if (-not $Pkg)
           {
             Write-Host "Contents of publish:"
             Get-ChildItem "publish" -Recurse
 
-            throw "No .app bundle found anywhere under publish/"
+            throw "No .pkg installer foudn in publish/"
           }
 
-          Write-Host "Found app bundle: $($App.FullName)"
-
-          Copy-Item $App.FullName $Package -Recurse -Force
-          Copy-Item "$env:GITHUB_WORKSPACE/LICENSE.txt" "release/"
-
-          Compress-Archive `
-            -Path "release/MalfunctionBoard", "release/LICENSE.txt" `
-            -DestinationPath "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.zip" `
-            -Force
+          Copy-Item `
+            $Pkg.FullName `
+            "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.pkg"
 
       - name: Upload release package
         uses: actions/upload-artifact@v4
         with:
           name: MalfunctionBoard-${{ matrix.asset-suffix }}
-          path: MalfunctionBoard-${{ github.ref_name }}-${{ matrix.asset-suffix }}.zip
+          path: MalfunctionBoard-${{ github.ref_name }}-${{ matrix.asset-suffix }}.*
 
   release:
     needs: build
