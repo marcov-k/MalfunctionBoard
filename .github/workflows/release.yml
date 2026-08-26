@@ -64,7 +64,7 @@ jobs:
           New-Item -ItemType Directory -Force $Package | Out-Null
 
           Copy-Item "publish/*" $Package -Recurse -Force
-          Copy-Item "$env:GITHUB_WORKSPACE/LICENSE.txt" "release/"
+          Copy-Item "$env:GITHUB_WORKSPACE/LICENSE" "release/"
 
           $TargetFile = Join-Path $Package "MalfunctionBoard.exe"
           $ShortcutFile = "release/MalfunctionBoard.lnk"
@@ -100,9 +100,8 @@ jobs:
             throw "No .pkg installer foudn in publish/"
           }
 
-          Copy-Item `
-            $Pkg.FullName `
-            "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.pkg"
+          Copy-Item $Pkg.FullName $Package -Force
+          Copy-Item "$env:GITHUB_WORKSPACE/LICENSE" "$Package/"
 
       - name: Upload release package
         uses: actions/upload-artifact@v4
