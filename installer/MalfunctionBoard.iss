@@ -31,11 +31,8 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; \
   Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#ApplicationName}"
-Filename: "{app}\{#ExecutableName}"
-
-Name: "{autodesktop}\{#ApplicationName}"
-Filename: "{app}\{#ExecutableName}"
+Name: "{autoprograms}\{#ApplicationName}"; Filename: "{app}\{#ExecutableName}"
+Name: "{autodesktop}\{#ApplicationName}"; Filename: "{app}\{#ExecutableName}"
 
 [Run]
 Filename: "{app}\{#ExecutableName}"
