@@ -85,8 +85,6 @@ jobs:
         run: |
           $Version = "${{ github.ref_name }}"
 
-          New-Item -ItemType Directory -Force $Package | Out-Null
-
           $Pkg = Get-ChildItem "publish" -Filter "*.pkg" |
             Select-Object -First 1
 
