@@ -64,7 +64,6 @@ jobs:
           New-Item -ItemType Directory -Force $Package | Out-Null
 
           Copy-Item "publish/*" $Package -Recurse -Force
-          Copy-Item "$env:GITHUB_WORKSPACE/LICENSE" "release/"
 
           $TargetFile = Join-Path $Package "MalfunctionBoard.exe"
           $ShortcutFile = "release/MalfunctionBoard.lnk"
@@ -76,7 +75,7 @@ jobs:
           $Shortcut.Save()
 
           Compress-Archive `
-            -Path "release/MalfunctionBoard", "release/LICENSE", "release/MalfunctionBoard.lnk" `
+            -Path "release/MalfunctionBoard", "release/MalfunctionBoard.lnk" `
             -DestinationPath "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.zip" `
             -Force
 
@@ -85,23 +84,14 @@ jobs:
         shell: pwsh
         run: |
           $Version = "${{ github.ref_name }}"
-          $Package = "release/MalfunctionBoard"
 
           New-Item -ItemType Directory -Force $Package | Out-Null
 
           $Pkg = Get-ChildItem "publish" -Filter "*.pkg" |
             Select-Object -First 1
 
-          if (-not $Pkg)
-          {
-            Write-Host "Contents of publish:"
-            Get-ChildItem "publish" -Recurse
-
-            throw "No .pkg installer foudn in publish/"
-          }
-
-          Copy-Item $Pkg.FullName $Package -Force
-          Copy-Item "$env:GITHUB_WORKSPACE/LICENSE" "$Package/"
+          New-Item -ItemType Directory -Force "release" | Out-Null
+          Copy-Item $Pkg.FullName "release/MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.pkg" -Force
 
       - name: Upload release package
         uses: actions/upload-artifact@v4
@@ -133,7 +123,7 @@ jobs:
           generate_release_notes: true
           files: |
             release/**/MalfunctionBoard-${{ github.ref_name }}-win.zip
-            release/**/MalfunctionBoard-${{ github.ref_name }}-mac-arm64.zip
-            release/**/MalfunctionBoard-${{ github.ref_name }}-mac-x64.zip
+            release/**/MalfunctionBoard-${{ github.ref_name }}-mac-arm64.pkg
+            release/**/MalfunctionBoard-${{ github.ref_name }}-mac-x64.pkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
