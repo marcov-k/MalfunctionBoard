@@ -64,18 +64,10 @@ jobs:
           New-Item -ItemType Directory -Force $Package | Out-Null
 
           Copy-Item "publish/*" $Package -Recurse -Force
-
-          $TargetFile = Join-Path $Package "MalfunctionBoard.exe"
-          $ShortcutFile = "release/MalfunctionBoard.lnk"
-
-          $WScriptShell = New-Object -ComObject WScript.Shell
-          $Shortcut = $WScriptShell.CreateShortcut($ShortcutFile)
-          $Shortcut.TargetPath = $TargetFile
-          $Shortcut.WorkingDirectory = $Package
-          $Shortcut.Save()
+          Copy-Item $env:GITHUB_WORKSPACE/MalfunctionBoard.bat release/
 
           Compress-Archive `
-            -Path "release/MalfunctionBoard", "release/MalfunctionBoard.lnk" `
+            -Path "release/MalfunctionBoard", "release/MalfunctionBoard.bat" `
             -DestinationPath "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.zip" `
             -Force
 
