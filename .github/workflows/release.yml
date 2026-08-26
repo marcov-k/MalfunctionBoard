@@ -91,11 +91,19 @@ jobs:
           New-Item -ItemType Directory -Force "release" | Out-Null
           Copy-Item $Pkg.FullName "release/MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.pkg" -Force
 
-      - name: Upload release package
+      - name: Upload Windows release package
+        if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: MalfunctionBoard-${{ matrix.asset-suffix }}
-          path: MalfunctionBoard-${{ github.ref_name }}-${{ matrix.asset-suffix }}.*
+          path: MalfunctionBoard-${{ github.ref_name }}-${{ matrix.asset-suffix }}.zip
+
+      - name: Upload Mac Catalyst release package
+        if: runner.os == 'MacOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: MalfunctionBoard-${{ matrix.asset-suffix }}
+          path: release/MalfunctionBoard-${{ github.ref_name }}-${{ matrix.asset-suffix }}.pkg
 
   release:
     needs: build
