@@ -35,6 +35,5 @@ Name: "{autoprograms}\{#ApplicationName}"; Filename: "{app}\{#ExecutableName}"
 Name: "{autodesktop}\{#ApplicationName}"; Filename: "{app}\{#ExecutableName}"
 
 [Run]
-Filename: "{app}\{#ExecutableName}"
-Description: "Launch {#ApplicationName}"
-Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#ExecutableName}"; Description: "Launch {#ApplicationName}"; \
+  Flags: nowait postinstall skipifsilent
