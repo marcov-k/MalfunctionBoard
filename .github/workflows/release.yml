@@ -89,7 +89,7 @@ jobs:
 
           New-Item -ItemType Directory -Force $Package | Out-Null
 
-          $Pkg = Get-ChildItem "publish" -Recurse -Directory -Filter "*.pkg" |
+          $Pkg = Get-ChildItem "publish" -Filter "*.pkg" |
             Select-Object -First 1
 
           if (-not $Pkg)
