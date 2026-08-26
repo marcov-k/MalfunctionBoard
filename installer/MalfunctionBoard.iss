@@ -1,6 +1,6 @@
-#define ApplicationName = "MalfunctionBoard"
-#define Publisher = "Malfunctionz"
-#define ExecutableName = "MalfunctionBoard.exe"
+#define ApplicationName "MalfunctionBoard"
+#define Publisher "Malfunctionz"
+#define ExecutableName "MalfunctionBoard.exe"
 
 [Setup]
 AppId={{0779fa1d-0f42-4d61-8d57-9694c8fa4660}}
