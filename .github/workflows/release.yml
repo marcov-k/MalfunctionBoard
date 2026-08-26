@@ -76,7 +76,7 @@ jobs:
           $Shortcut.Save()
 
           Compress-Archive `
-            -Path "release/MalfunctionBoard", "release/LICENSE.txt", "release/MalfunctionBoard.lnk" `
+            -Path "release/MalfunctionBoard", "release/LICENSE", "release/MalfunctionBoard.lnk" `
             -DestinationPath "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.zip" `
             -Force
 
