@@ -31,9 +31,9 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; \
   Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{autoprograms}\{#ApplicationName}"; Filename: "{app}\{#ExecutableName}"
-Name: "{autodesktop}\{#ApplicationName}"; Filename: "{app}\{#ExecutableName}"
+Name: "{autoprograms}\{#ApplicationName}"; Filename: "{app}\{#ExecutableName}"; WorkingDir: "{app}"
+Name: "{autodesktop}\{#ApplicationName}"; Filename: "{app}\{#ExecutableName}"; WorkingDir: "{app}"
 
 [Run]
-Filename: "{app}\{#ExecutableName}"; Description: "Launch {#ApplicationName}"; \
+Filename: "{app}\{#ExecutableName}"; WorkingDir: "{app}"; Description: "Launch {#ApplicationName}"; \
   Flags: nowait postinstall skipifsilent
