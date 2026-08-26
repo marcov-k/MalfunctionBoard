@@ -54,22 +54,21 @@ jobs:
           -p:CreateAppBundle=true
           -o publish
 
-      - name: Package Windows
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build Windows installer
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $Version = "${{ github.ref_name }}"
-          $Package = "release/MalfunctionBoard"
+          $Version = "${{ github.ref_name }}".TrimStart("v")
 
-          New-Item -ItemType Directory -Force $Package | Out-Null
-
-          Copy-Item "publish/*" $Package -Recurse -Force
-          Copy-Item $env:GITHUB_WORKSPACE/MalfunctionBoardInstaller.bat release/
-
-          Compress-Archive `
-            -Path "release/MalfunctionBoard", "release/MalfunctionBoardInstaller.bat" `
-            -DestinationPath "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.zip" `
-            -Force
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            "/DApplicationVersion=$Version" `
+            "/DPublishDir=$env:GITHUB_WORKSPACE\publish" `
+            "$env:GITHUB_WORKSPACE\installer\MalfunctionBoard.iss"
 
       - name: Package Mac Catalyst
         if: runner.os == 'macOS'
@@ -88,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MalfunctionBoard-${{ matrix.asset-suffix }}
-          path: MalfunctionBoard-${{ github.ref_name }}-${{ matrix.asset-suffix }}.zip
+          path: installer/output/MalfunctionBoard-${{ github.ref_name }}-win.exe
 
       - name: Upload Mac Catalyst release package
         if: runner.os == 'MacOS'
@@ -120,7 +119,7 @@ jobs:
           name: MalfunctionBoard ${{ github.ref_name }}
           generate_release_notes: true
           files: |
-            release/**/MalfunctionBoard-${{ github.ref_name }}-win.zip
+            release/**/MalfunctionBoard-${{ github.ref_name }}-win.exe
             release/**/MalfunctionBoard-${{ github.ref_name }}-mac-arm64.pkg
             release/**/MalfunctionBoard-${{ github.ref_name }}-mac-x64.pkg
         env:
