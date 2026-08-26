@@ -12,7 +12,7 @@ DefaultDirName={autopf}\{#ApplicationName}
 DefaultGroupName={#ApplicationName}
 
 OutputDir=output
-OutputBaseFilename=MalfunctionBoard-{#ApplicationVersion}-win
+OutputBaseFilename=MalfunctionBoard-v{#ApplicationVersion}-win
 
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
