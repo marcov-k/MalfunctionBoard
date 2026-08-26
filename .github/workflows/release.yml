@@ -70,6 +70,16 @@ jobs:
             "/DPublishDir=$env:GITHUB_WORKSPACE\publish" `
             "$env:GITHUB_WORKSPACE\installer\MalfunctionBoard.iss"
 
+          $Installer = "$env:GITHUB_WORKSPACE\installer\output\MalfunctionBoard-${{ github.ref_name }}-win.exe"
+
+          if (-not (Test-Path $Installer)) {
+            Write-Error "Windows installer was not created: $Installer"
+            exit 1
+          }
+
+          Write-Host "Created installer:"
+          Write-Host $Installer
+
       - name: Package Mac Catalyst
         if: runner.os == 'macOS'
         shell: pwsh
@@ -90,7 +100,7 @@ jobs:
           path: installer/output/MalfunctionBoard-${{ github.ref_name }}-win.exe
 
       - name: Upload Mac Catalyst release package
-        if: runner.os == 'MacOS'
+        if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: MalfunctionBoard-${{ matrix.asset-suffix }}
