@@ -64,10 +64,10 @@ jobs:
           New-Item -ItemType Directory -Force $Package | Out-Null
 
           Copy-Item "publish/*" $Package -Recurse -Force
-          Copy-Item $env:GITHUB_WORKSPACE/MalfunctionBoard.bat release/
+          Copy-Item $env:GITHUB_WORKSPACE/MalfunctionBoardInstaller.bat release/
 
           Compress-Archive `
-            -Path "release/MalfunctionBoard", "release/MalfunctionBoard.bat" `
+            -Path "release/MalfunctionBoard", "release/MalfunctionBoardInstaller.bat" `
             -DestinationPath "MalfunctionBoard-$Version-${{ matrix.asset-suffix }}.zip" `
             -Force
 
