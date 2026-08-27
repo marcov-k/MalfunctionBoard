@@ -17,7 +17,7 @@ namespace MalfunctionBoard.Utilities
 
         public static void SaveLayout(MainPage mainPage)
         {
-            var displays = mainPage.DisplayBindings.Select(b => b.Display).ToList();
+            var displays = mainPage.DisplayBindings.Select(b => b.Display);
 
             List<DisplayData> displayData = [];
             foreach (var display in displays)
