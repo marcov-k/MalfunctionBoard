@@ -9,7 +9,8 @@ namespace MalfunctionBoard.Utilities
 {
     public static class Saver
     {
-        static string FilePath => Path.Combine(FileSystem.AppDataDirectory, DirectoryName, FileName);
+        readonly static string FilePath = Path.Combine(FileSystem.AppDataDirectory, DirectoryName, FileName);
+        readonly static string DirectoryPath = Path.Combine(FileSystem.AppDataDirectory, DirectoryName);
         const string DirectoryName = "Config";
         const string FileName = "Layout.mb";
         static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
@@ -27,7 +28,7 @@ namespace MalfunctionBoard.Utilities
             LayoutData layoutData = new(displayData);
             SaveData saveData = new(layoutData, NetworkTableReader.TableName);
             string jsonData = JsonSerializer.Serialize(saveData, SerializerOptions);
-            Directory.CreateDirectory(FilePath);
+            Directory.CreateDirectory(DirectoryPath);
             File.WriteAllText(FilePath, jsonData);
         }
 
