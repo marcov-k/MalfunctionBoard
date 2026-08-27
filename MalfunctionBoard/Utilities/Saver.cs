@@ -9,6 +9,7 @@ namespace MalfunctionBoard.Utilities
 {
     public static class Saver
     {
+        static string FilePath => Path.Combine(FileSystem.AppDataDirectory, DirectoryName, FileName);
         const string DirectoryName = "Config";
         const string FileName = "Layout.mb";
         static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
@@ -26,16 +27,15 @@ namespace MalfunctionBoard.Utilities
             LayoutData layoutData = new(displayData);
             SaveData saveData = new(layoutData, NetworkTableReader.TableName);
             string jsonData = JsonSerializer.Serialize(saveData, SerializerOptions);
-            string filePath = SaveFilePath();
-            File.WriteAllText(filePath, jsonData);
+            Directory.CreateDirectory(FilePath);
+            File.WriteAllText(FilePath, jsonData);
         }
 
         public static void LoadLayout(MainPage mainPage)
         {
-            string filePath = SaveFilePath();
-            if (!File.Exists(filePath)) return;
+            if (!File.Exists(FilePath)) return;
 
-            string jsonData = File.ReadAllText(filePath);
+            string jsonData = File.ReadAllText(FilePath);
             var saveData = JsonSerializer.Deserialize<SaveData>(jsonData);
 
             bool incompleteLoading = false;
@@ -71,16 +71,6 @@ namespace MalfunctionBoard.Utilities
             else WarningPage.ShowWarning("Failed To Load Previous Layout", mainPage.Window);
 
             if (incompleteLoading) WarningPage.ShowWarning("Could Not Fully Load Previous Layout", mainPage.Window);
-        }
-
-        static string SaveFilePath()
-        {
-            if (!Directory.Exists(DirectoryName))
-            {
-                Directory.CreateDirectory(DirectoryName);
-            }
-
-            return Path.Combine(DirectoryName, FileName);
         }
     }
 }
