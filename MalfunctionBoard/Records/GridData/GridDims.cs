@@ -9,8 +9,8 @@ namespace MalfunctionBoard.Records.GridData
             get => Width;
             set => Width = value;
         }
-        public int MinX { get => 1; }
-        public int MaxX { get => MainPage.ColumnCount; }
+        public int MinX => 1;
+        public int MaxX => MainPage.ColumnCount;
         public int Width
         {
             get => _width;
@@ -22,8 +22,8 @@ namespace MalfunctionBoard.Records.GridData
             get => Height;
             set => Height = value;
         }
-        public int MinY { get => 1; }
-        public int MaxY { get => MainPage.RowCount; }
+        public int MinY => 1;
+        public int MaxY => MainPage.RowCount;
         public int Height
         {
             get => _height;

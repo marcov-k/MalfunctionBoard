@@ -10,15 +10,15 @@ namespace MalfunctionBoard.Records.GridData
             get => Row;
             set => Row = value;
         }
-        public int MinX { get => 0; }
-        public int MaxX { get => MainPage.RowCount - 1; }
+        public int MinX => 0;
+        public int MaxX => MainPage.RowCount - 1;
         public int Y
         {
             get => Col;
             set => Col = value;
         }
-        public int MinY { get => 0; }
-        public int MaxY { get => MainPage.ColumnCount - 1; }
+        public int MinY => 0;
+        public int MaxY => MainPage.ColumnCount - 1;
         public int Row
         {
             get => _row;
