@@ -4,9 +4,8 @@ Custom dashboard application for FRC team 9668 Malfunctionz capable of reading d
 
 ## Installation
 ### Windows (x64)
-1. Download the MalfunctionBoard-[version]-win .zip file from the most recent GitHub release
-2. Extract the downloaded .zip file and run the MalfunctionBoardInstaller.bat batch file - this will move the application into
-your drive's ProgramFiles directory and create a desktop shortcut.
+1. Download the MalfunctionBoard-[version]-win.exe installer file from the most recent GitHub release
+2. Run the downloaded installer and follow the prompts to install the application
 ### Mac (x64/ARM64)
 1. Download the MalfunctionBoard-[version]-mac-[CPU architecture] .pkg file from the most recent GitHub release
 (use x64 for Intel chips and ARM64 for Apple Silicon chips respectively)
