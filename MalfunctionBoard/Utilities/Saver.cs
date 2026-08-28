@@ -9,8 +9,24 @@ namespace MalfunctionBoard.Utilities
 {
     public static class Saver
     {
-        readonly static string FilePath = Path.Combine(FileSystem.AppDataDirectory, DirectoryName, FileName);
-        readonly static string DirectoryPath = Path.Combine(FileSystem.AppDataDirectory, DirectoryName);
+        static string FilePath
+        {
+            get
+            {
+                _filePath ??= Path.Combine(DirectoryPath, FileName);
+                return _filePath;
+            }
+        }
+        static string? _filePath = null;
+        static string DirectoryPath
+        {
+            get
+            {
+                _directoryPath ??= Path.Combine(FileSystem.AppDataDirectory, DirectoryName);
+                return _directoryPath;
+            }
+        }
+        static string? _directoryPath = null;
         const string DirectoryName = "Config";
         const string FileName = "Layout.mb";
         static readonly JsonSerializerOptions SerializerOptions = new() { WriteIndented = true };
