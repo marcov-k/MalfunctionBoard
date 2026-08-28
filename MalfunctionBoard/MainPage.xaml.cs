@@ -1,16 +1,16 @@
-﻿namespace MalfunctionBoard
-{
-    using FRC.NetworkTables;
-    using MalfunctionBoard.Buttons;
-    using MalfunctionBoard.Displays;
-    using MalfunctionBoard.Exceptions;
-    using MalfunctionBoard.Interfaces;
-    using MalfunctionBoard.Records.Displays;
-    using MalfunctionBoard.Records.GridData;
-    using MalfunctionBoard.SubPages;
-    using MalfunctionBoard.Utilities;
-    using Microsoft.Maui.Devices;
+﻿using FRC.NetworkTables;
+using MalfunctionBoard.Buttons;
+using MalfunctionBoard.Displays;
+using MalfunctionBoard.Exceptions;
+using MalfunctionBoard.Interfaces;
+using MalfunctionBoard.Records.Displays;
+using MalfunctionBoard.Records.GridData;
+using MalfunctionBoard.SubPages;
+using MalfunctionBoard.Utilities;
+using Microsoft.Maui.Devices;
 
+namespace MalfunctionBoard
+{
     public partial class MainPage : ContentPage
     {
         readonly Grid MainGrid;
