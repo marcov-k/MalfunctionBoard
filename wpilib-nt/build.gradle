@@ -19,6 +19,7 @@ repositories {
 dependencies {
     implementation "edu.wpi.first.ntcore:ntcore-java:2026.+"
     implementation "edu.wpi.first.wpiutil:wpiutil-java:2026.+"
+    implementation "com.google.code.gson:gson:2.11.0"
 }
 
 publishing {
