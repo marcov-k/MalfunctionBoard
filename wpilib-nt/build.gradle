@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
+
+group = 'com.malfunctionz.malfunctionboard'
+version = System.getenv('VENDOR_VERSION') ?: '0.0.0-dev'
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://frcmaven.wpi.edu/artifactory/release/' }
+}
+
+dependencies {
+    implementation "edu.wpi.first.ntcore:ntcore-java:2026.+"
+    implementation "edu.wpi.first.wpiutil:wpiutil-java:2026.+"
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifactId = 'malfunctionboard-nt'
+            from components.java
+        }
+    }
+    repositories {
+        maven { url = uri("$rootDir/../publish-repo") }
+    }
+}
