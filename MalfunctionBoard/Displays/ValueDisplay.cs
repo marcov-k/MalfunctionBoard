@@ -2,7 +2,7 @@
 
 namespace MalfunctionBoard.Displays
 {
-    public partial class ValueDisplay<T> : DashboardDisplay, ITableValue
+    public abstract partial class ValueDisplay<T> : DashboardDisplay, ITableValue
     {
         public object? TableValue
         {
@@ -24,19 +24,13 @@ namespace MalfunctionBoard.Displays
         public static readonly BindableProperty ValueSizeProperty =
             BindableProperty.Create(nameof(ValueSize), typeof(double), typeof(ValueDisplay<>), 20.0);
 
-        protected virtual void UpdateValue(object? newValue)
-        {
-            throw new NotImplementedException();
-        }
+        protected abstract void UpdateValue(object? newValue);
 
         protected static void OnValueChanged(BindableObject bindable, object oldValue, object newValue)
         {
             if (bindable is ValueDisplay<T> control) control.UpdateDisplayedValue(newValue);
         }
 
-        protected virtual void UpdateDisplayedValue(object newValue)
-        {
-            throw new NotImplementedException();
-        }
+        protected abstract void UpdateDisplayedValue(object newValue);
     }
 }

@@ -1,4 +1,6 @@
 ﻿using FRC.NetworkTables;
+using MalfunctionBoard.TableDatatypes;
+using System.Text.Json;
 
 namespace MalfunctionBoard.Utilities
 {
@@ -29,10 +31,15 @@ namespace MalfunctionBoard.Utilities
             Table.AddEntryListener((tbl, key, in entry, in value, flags) =>
             {
                 var binding = key.ToString();
-                var data = entry.GetObjectValue();
 
-                MainThread.BeginInvokeOnMainThread(() =>
-                    MainPage?.UpdateDisplay(binding, data));
+                string json = entry.GetString(string.Empty);
+                using var doc = JsonDocument.Parse(json);
+
+                if (doc.RootElement.TryGetProperty("Type", out var typeProp) && TableTypeRegistry.Registry.TryGetValue(typeProp.GetString() ?? string.Empty, out var deserializer))
+                {
+                    var data = deserializer(json);
+                    MainThread.BeginInvokeOnMainThread(() => MainPage?.UpdateDisplay(binding, data));
+                }
             },
             NotifyFlags.Immediate | NotifyFlags.New | NotifyFlags.Update | NotifyFlags.Local);
         }

@@ -2,7 +2,7 @@
 
 namespace MalfunctionBoard.Displays
 {
-    public partial class ValueLabelDisplay<T> : ValueDisplay<T>
+    public abstract partial class ValueLabelDisplay<T> : ValueDisplay<T>
     {
         protected readonly Label ValueLabel;
 

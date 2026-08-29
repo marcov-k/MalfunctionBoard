@@ -5,7 +5,7 @@ using Microsoft.Maui.Layouts;
 
 namespace MalfunctionBoard.Displays
 {
-    public partial class DashboardDisplay : ContentView, IHasGridDims, IHasGridPos
+    public abstract partial class DashboardDisplay : ContentView, IHasGridDims, IHasGridPos
     {
         public required MainPage? MyPage { get; set; }
         public GridPos Position { get; set; } = new() { Row = 0, Col = 0 };
