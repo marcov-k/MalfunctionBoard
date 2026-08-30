@@ -13,7 +13,7 @@ Custom dashboard application for FRC team 9668 Malfunctionz capable of reading d
 3. Install the application via the downloaded .pkg installer
 ### WPILib Package
 1. In Visual Studio Code use the Command Center to run WPILib: Manage Vendor Libraries > Install new libraries (online) and enter the following URL: https://raw.githubusercontent.com/marcov-k/MalfunctionBoard/main/wpilib-nt/MalfunctionBoardNT.json
-2. In your Java script file, import com.malfunctionz.malfunctionboard.nt.MalfunctionBoard and com.malfunctionz.malfunctionboard.nt.datatypes.*
+2. In your Java code, import com.malfunctionz.malfunctionboard.nt.MalfunctionBoard and com.malfunctionz.malfunctionboard.nt.datatypes.*
 3. Create a new instance of the MalfunctionBoard class with your target NetworkTable name and use its public methods to write data to the table as needed
 
 ## Design and Functionality
