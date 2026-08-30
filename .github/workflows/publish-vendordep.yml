@@ -32,7 +32,9 @@ jobs:
         working-directory: wpilib-nt
         env:
           VENDOR_VERSION: ${{ steps.version.outputs.version }}
-        run: ./gradlew publish
+        run: |
+          chmod +x gradlew
+          ./gradlew publish
 
       - name: Update vendordep JSON version fields
         working-directory: wpilib-nt
