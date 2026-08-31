@@ -178,7 +178,9 @@ namespace MalfunctionBoard
 
         public void ChangeDisplay(DashboardDisplay display, string newTitle, string newBinding, GridPos newPos, GridDims newDims)
         {
-            if (ValidBinding(newBinding, display) && ValidPosition(newDims, newPos, out var positions, display))
+            if (!ValidBinding(newBinding, display)) throw new InvalidBindingException(newBinding);
+
+            if (ValidPosition(newDims, newPos, out var positions, display))
             {
                 DisplayBindings.RemoveAll(b => b.Display == display);
                 DisplayBindings.Add(new(newBinding, display));
@@ -199,6 +201,7 @@ namespace MalfunctionBoard
 
                 MainGrid.Add(display);
             }
+            else throw new InvalidPositionException(newPos, newDims);
         }
 
         public void UpdateDisplay(string binding, object? data)
