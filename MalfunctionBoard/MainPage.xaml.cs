@@ -32,7 +32,6 @@ namespace MalfunctionBoard
         static readonly Color SettingsColor = Colors.DarkBlue;
         static readonly Color SettingsHoverColor = Colors.Blue;
         const double SettingsButtonWidth = 150;
-        const string TableName = "datatable";
 
         public MainPage()
         {
@@ -149,10 +148,6 @@ namespace MalfunctionBoard
             }
 
             Saver.LoadLayout(this);
-
-            var instance = NetworkTableInstance.Default;
-            instance.StartServer();
-            instance.GetTable(TableName).GetEntry("test").SetDouble(5.5);
 
             NetworkTableReader.InitReader(this);
         }
