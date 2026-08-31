@@ -8,7 +8,8 @@ namespace MalfunctionBoard.TableDatatypes
         {
             ["Int"] = json => JsonSerializer.Deserialize<MBInt>(json),
             ["Double"] = json => JsonSerializer.Deserialize<MBDouble>(json),
-            ["String"] = json => JsonSerializer.Deserialize<MBString>(json)
+            ["String"] = json => JsonSerializer.Deserialize<MBString>(json),
+            ["Bool"] = json => JsonSerializer.Deserialize<MBBool>(json)
         };
     }
 }

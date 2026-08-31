@@ -1,4 +1,4 @@
 ﻿namespace MalfunctionBoard.TableDatatypes
 {
-    public record MBInt(string type, int Value);
+    public record MBInt(string Type, int Value);
 }
