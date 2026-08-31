@@ -32,16 +32,32 @@ namespace MalfunctionBoard.Utilities
             {
                 var binding = key.ToString();
 
-                string json = entry.GetString(string.Empty);
-                using var doc = JsonDocument.Parse(json);
-
-                if (doc.RootElement.TryGetProperty("Type", out var typeProp) && TableTypeRegistry.Registry.TryGetValue(typeProp.GetString() ?? string.Empty, out var deserializer))
-                {
-                    var data = deserializer(json);
-                    MainThread.BeginInvokeOnMainThread(() => MainPage?.UpdateDisplay(binding, data));
-                }
+                var data = ExtractData(entry);
+                MainThread.BeginInvokeOnMainThread(() => MainPage?.UpdateDisplay(binding, data));
             },
             NotifyFlags.Immediate | NotifyFlags.New | NotifyFlags.Update | NotifyFlags.Local);
+        }
+
+        public static void ReadBinding(string binding)
+        {
+            if (Table is null) return;
+
+            var entry = Table.GetEntry(binding);
+            var data = ExtractData(entry);
+            MainPage?.UpdateDisplay(binding, data);
+        }
+
+        static object? ExtractData(NetworkTableEntry entry)
+        {
+            string json = entry.GetString(string.Empty);
+            using var doc = JsonDocument.Parse(json);
+
+            object? data = null;
+            if (doc.RootElement.TryGetProperty("Type", out var typeProp) && TableTypeRegistry.Registry.TryGetValue(typeProp.GetString() ?? string.Empty, out var deserializer))
+            {
+                data = deserializer(json);
+            }
+            return data;
         }
     }
 }

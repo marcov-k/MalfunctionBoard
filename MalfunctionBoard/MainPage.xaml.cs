@@ -1,5 +1,4 @@
-﻿using FRC.NetworkTables;
-using MalfunctionBoard.Buttons;
+﻿using MalfunctionBoard.Buttons;
 using MalfunctionBoard.Displays;
 using MalfunctionBoard.Exceptions;
 using MalfunctionBoard.Interfaces;
@@ -172,6 +171,8 @@ namespace MalfunctionBoard
                 DisplayBindings.Add(new(binding, display));
 
                 MainGrid.Add(display);
+
+                NetworkTableReader.ReadBinding(binding);
             }
             else throw new InvalidPositionException(position, dimensions);
         }
