@@ -10,11 +10,11 @@ import edu.wpi.first.networktables.StringPublisher;
 
 public class MalfunctionBoard
 {
-    static Gson gson = new GsonBuilder()
+    static final Gson gson = new GsonBuilder()
         .setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE)
         .create();
 
-    NetworkTable networkTable;
+    final NetworkTable networkTable;
 
     public MalfunctionBoard(String networkTableName)
     {
@@ -34,6 +34,11 @@ public class MalfunctionBoard
     public void writeString(String entryName, MBString data)
     {
         writeDataToEntry(getEntry(entryName), data);
+    }
+
+    public void writeBool(String entryName, MBBool value)
+    {
+        writeDataToEntry(getEntry(entryName), value);
     }
 
     StringPublisher getEntry(String entryName)
