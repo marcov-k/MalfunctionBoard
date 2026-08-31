@@ -52,12 +52,3 @@ jobs:
           git add publish-repo wpilib-nt/MalfunctionBoardNT.json
           git commit -m "Publish malfunctionboard-nt ${{ steps.version.outputs.version }}"
           git push origin HEAD:main
-
-      - name: Create GitHub release for Java package
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "MalfunctionBoard NT ${{ steps.version.outputs.version }}"
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
