@@ -43,6 +43,8 @@ namespace MalfunctionBoard.Utilities
             if (Table is null) return;
 
             var entry = Table.GetEntry(binding);
+            if (string.IsNullOrEmpty(entry.GetString(string.Empty))) return;
+
             var data = ExtractData(entry);
             MainPage?.UpdateDisplay(binding, data);
         }
