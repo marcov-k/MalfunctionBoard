@@ -11,6 +11,7 @@ import java.util.HashMap;
 
 public class MalfunctionBoard
 {
+    static final String kNetworkTableName = "MalfunctionBoardTable";
     static final Gson gson = new GsonBuilder()
         .setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE)
         .create();
@@ -18,9 +19,9 @@ public class MalfunctionBoard
     final NetworkTable networkTable;
     final HashMap<String, StringPublisher> publisherCache = new HashMap<>();
 
-    public MalfunctionBoard(String networkTableName)
+    public MalfunctionBoard()
     {
-        networkTable = NetworkTableInstance.getDefault().getTable(networkTableName);
+        networkTable = NetworkTableInstance.getDefault().getTable(kNetworkTableName);
     }
 
     public void writeInt(String entryName, MBInt value)
