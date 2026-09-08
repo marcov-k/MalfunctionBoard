@@ -1,0 +1,123 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.malfunctionz.malfunctionboard",
+    "module": "malfunctionboard-nt",
+    "version": "0.4.11",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.11"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api"
+      },
+      "files": [
+        {
+          "name": "malfunctionboard-nt-0.4.11.jar",
+          "url": "malfunctionboard-nt-0.4.11.jar",
+          "size": 6572,
+          "sha512": "f8904432eaf9a602191083acd5318b5473f7175033cc1bbc56650ff04545381311093e7d3c42d3e80fc6478d148c647379ee4a9f0ed627d607bc35c80d102df1",
+          "sha256": "4ab8211a60410c5b1574f34d62b389fad5e567ac5b3beaaa20282f023078323b",
+          "sha1": "8f464f4d0a32d76bc3012772d758728affe7269d",
+          "md5": "2e2fab352dafadcc649f489b87cdb892"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.version": 17,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime"
+      },
+      "dependencies": [
+        {
+          "group": "edu.wpi.first.ntcore",
+          "module": "ntcore-java",
+          "version": {
+            "requires": "2026.+"
+          }
+        },
+        {
+          "group": "edu.wpi.first.wpiutil",
+          "module": "wpiutil-java",
+          "version": {
+            "requires": "2026.+"
+          }
+        },
+        {
+          "group": "com.google.code.gson",
+          "module": "gson",
+          "version": {
+            "requires": "2.11.0"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "malfunctionboard-nt-0.4.11.jar",
+          "url": "malfunctionboard-nt-0.4.11.jar",
+          "size": 6572,
+          "sha512": "f8904432eaf9a602191083acd5318b5473f7175033cc1bbc56650ff04545381311093e7d3c42d3e80fc6478d148c647379ee4a9f0ed627d607bc35c80d102df1",
+          "sha256": "4ab8211a60410c5b1574f34d62b389fad5e567ac5b3beaaa20282f023078323b",
+          "sha1": "8f464f4d0a32d76bc3012772d758728affe7269d",
+          "md5": "2e2fab352dafadcc649f489b87cdb892"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "malfunctionboard-nt-0.4.11-sources.jar",
+          "url": "malfunctionboard-nt-0.4.11-sources.jar",
+          "size": 2962,
+          "sha512": "5551b9d17af04f55c68369776ee220fecc4883409cb3f07e21d3d0da04a1b7a8e7d1d60f97f1aa59a84bd82039d709420f60b443d9d32a499545713a3a15e867",
+          "sha256": "6c5de637bd51d6cd36655d324efb4586a76575579904b96dfc0ef32684abf226",
+          "sha1": "12a525719aabeb511f7e3de7224e164847bfd2ba",
+          "md5": "6a3ac2f869f0126748f7b7dfd19a0838"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "malfunctionboard-nt-0.4.11-javadoc.jar",
+          "url": "malfunctionboard-nt-0.4.11-javadoc.jar",
+          "size": 99278,
+          "sha512": "611b9d5b5edaa6bede2888598b62c5cc63967a97da708b41d3f6fcf6966f005eb3a6d2ef68ff50c3273a0ebe6c5e6c57459b59be2a72efa23fdd53bbb7802e40",
+          "sha256": "28990055d33e1071fa79c03fe541ebcf643f32b7e1951bf2b19593e74c7e4519",
+          "sha1": "547ac502d55c9b0e01d942463a0199fc9443b64c",
+          "md5": "85fb77580cd3bfb93731d5d13c173c13"
+        }
+      ]
+    }
+  ]
+}
