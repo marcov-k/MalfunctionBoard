@@ -7,6 +7,7 @@ import com.malfunctionz.malfunctionboard.nt.datatypes.*;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
+import java.util.HashMap;
 
 public class MalfunctionBoard
 {
@@ -15,6 +16,7 @@ public class MalfunctionBoard
         .create();
 
     final NetworkTable networkTable;
+    final HashMap<String, StringPublisher> publisherCache = new HashMap<>();
 
     public MalfunctionBoard(String networkTableName)
     {
@@ -43,12 +45,21 @@ public class MalfunctionBoard
 
     StringPublisher getEntry(String entryName)
     {
-        return networkTable.getStringTopic(entryName).publish();
+        return publisherCache.computeIfAbsent(entryName, name -> networkTable.getStringTopic(name).publish());
     }
 
     static <T> void writeDataToEntry(StringPublisher entry, T data)
     {
         String json = gson.toJson(data);
         entry.set(json);
+    }
+
+    public void close()
+    {
+        for (StringPublisher publisher : publisherCache.values())
+        {
+            publisher.close();
+        }
+        publisherCache.clear();
     }
 }
