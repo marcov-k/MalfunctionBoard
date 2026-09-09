@@ -203,6 +203,7 @@ namespace MalfunctionBoard.SubPages
             }
 
             Loaded += OnPageLoaded;
+            Unloaded += OnPageUnloaded;
         }
 
         void OnPageLoaded(object? sender, EventArgs e)
@@ -225,6 +226,12 @@ namespace MalfunctionBoard.SubPages
                 Window.X = (screenWidth - WindowWidth) / 2;
                 Window.Y = (screenHeight - WindowHeight) / 2;
             }
+        }
+
+        void OnPageUnloaded(object? sender, EventArgs e)
+        {
+            Loaded -= OnPageLoaded;
+            Unloaded -= OnPageUnloaded;
         }
 
         void Confirm()

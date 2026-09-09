@@ -23,17 +23,13 @@ namespace MalfunctionBoard
         static readonly Thickness GridMargin = new(10);
         const double AddButtonSpacing = 0;
         static readonly Thickness AddButtonMargin = new(10);
-        const double SettingsTextSize = 27.5;
-        static readonly Thickness SettingsButtonMargin = new(10, 0, 0, 10);
         internal static readonly Color CellColor = Colors.Gray;
         static readonly Color GridColor = Colors.LightGray;
         static readonly Color PageColor = Colors.DarkGray;
-        static readonly Color SettingsColor = Colors.DarkBlue;
-        static readonly Color SettingsHoverColor = Colors.Blue;
-        const double SettingsButtonWidth = 150;
 
         public MainPage()
         {
+            InitNetworkTable();
             InitDisplayTypes();
 
             BackgroundColor = PageColor;
@@ -99,30 +95,12 @@ namespace MalfunctionBoard
                 });
             }
 
-            Button settingsButton = new()
-            {
-                Text = "Settings",
-                FontSize = SettingsTextSize,
-                BackgroundColor = SettingsColor,
-                Margin = SettingsButtonMargin,
-                HorizontalOptions = LayoutOptions.Start,
-                WidthRequest = SettingsButtonWidth,
-                VerticalOptions = LayoutOptions.Fill
-            };
-
-            PointerGestureRecognizer settingsGesture = new();
-            settingsGesture.PointerEntered += (_, _) => settingsButton.BackgroundColor = SettingsHoverColor;
-            settingsGesture.PointerExited += (_, _) => settingsButton.BackgroundColor = SettingsColor;
-
-            settingsButton.GestureRecognizers.Add(settingsGesture);
-            settingsButton.Clicked += (_, _) => SettingsPage.OpenSettings(Window, this);
-
             pageLayout.Add(topBar, 0, 0);
             pageLayout.Add(MainGrid, 0, 1);
-            pageLayout.Add(settingsButton, 0, 2);
             Content = pageLayout;
 
             Loaded += OnPageLoaded;
+            Unloaded += OnPageUnloaded;
         }
 
         void OnPageLoaded(object? sender, EventArgs e)
@@ -147,8 +125,14 @@ namespace MalfunctionBoard
             }
 
             Saver.LoadLayout(this);
+        }
 
-            NetworkTableReader.InitReader(this);
+        void OnPageUnloaded(object? sender, EventArgs e)
+        {
+            Loaded -= OnPageLoaded;
+            Unloaded -= OnPageUnloaded;
+
+            WebSocketsWrapper.CloseConnection();
         }
 
         public void AddDisplay<T>(string title, string binding, GridPos position, GridDims dimensions)
@@ -172,7 +156,7 @@ namespace MalfunctionBoard
 
                 MainGrid.Add(display);
 
-                NetworkTableReader.ReadBinding(binding);
+                NetworkTableReader.DisplayEntry(binding);
             }
             else throw new InvalidPositionException(position, dimensions);
         }
@@ -249,6 +233,12 @@ namespace MalfunctionBoard
                 .Where(t => t.IsSubclassOf(typeof(DashboardDisplay)) && t.IsAssignableTo(typeof(ICreatable)));
 
             DisplayTypes.AddRange(displayTypes);
+        }
+
+        void InitNetworkTable()
+        {
+            NetworkTableReader.InitReader(this);
+            _ = WebSocketsWrapper.ConnectWebSocket();
         }
     }
 }

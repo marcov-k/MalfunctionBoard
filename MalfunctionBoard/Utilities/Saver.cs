@@ -1,5 +1,4 @@
 ﻿using MalfunctionBoard.Exceptions;
-using MalfunctionBoard.Records;
 using MalfunctionBoard.Records.Displays;
 using MalfunctionBoard.Records.GridData;
 using MalfunctionBoard.SubPages;
@@ -42,8 +41,7 @@ namespace MalfunctionBoard.Utilities
             }
 
             LayoutData layoutData = new(displayData);
-            SaveData saveData = new(layoutData, NetworkTableReader.TableName);
-            string jsonData = JsonSerializer.Serialize(saveData, SerializerOptions);
+            string jsonData = JsonSerializer.Serialize(layoutData, SerializerOptions);
             Directory.CreateDirectory(DirectoryPath);
             File.WriteAllText(FilePath, jsonData);
         }
@@ -53,13 +51,11 @@ namespace MalfunctionBoard.Utilities
             if (!File.Exists(FilePath)) return;
 
             string jsonData = File.ReadAllText(FilePath);
-            var saveData = JsonSerializer.Deserialize<SaveData>(jsonData);
+            var layoutData = JsonSerializer.Deserialize<LayoutData>(jsonData);
 
             bool incompleteLoading = false;
-            if (saveData is not null)
+            if (layoutData is not null)
             {
-                var layoutData = saveData.Layout;
-
                 foreach (var display in layoutData.Displays)
                 {
                     try
@@ -82,8 +78,6 @@ namespace MalfunctionBoard.Utilities
                         incompleteLoading = true;
                     }
                 }
-
-                NetworkTableReader.TableName = saveData.TableName;
             }
             else WarningPage.ShowWarning("Failed To Load Previous Layout", mainPage.Window);
 

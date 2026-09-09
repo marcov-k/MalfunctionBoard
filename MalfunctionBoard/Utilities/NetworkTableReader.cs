@@ -1,57 +1,48 @@
-﻿using FRC.NetworkTables;
-using MalfunctionBoard.TableDatatypes;
+﻿using MalfunctionBoard.TableDatatypes;
 using System.Text.Json;
 
 namespace MalfunctionBoard.Utilities
 {
     public static class NetworkTableReader
     {
-        public static string TableName
-        {
-            get => _tableName;
-            set
-            {
-                _tableName = value;
-                UpdateTable();
-            }
-        }
-        static string _tableName = string.Empty;
-        static NetworkTable? Table;
         static MainPage? MainPage;
+        static readonly Dictionary<int, string> IdToBinding = [];
+        static readonly Dictionary<string, object?> DataCache = [];
 
         public static void InitReader(MainPage mainPage)
         {
             MainPage = mainPage;
         }
 
-        static void UpdateTable()
+        public static void AddKey(string name, int id)
         {
-            Table = NetworkTableInstance.Default.GetTable(TableName);
+            name = name.Replace("/MalfunctionBoardTable/", string.Empty);
+            IdToBinding[id] = name;
+        }
 
-            Table.AddEntryListener((tbl, key, in entry, in value, flags) =>
+        public static void DisplayEntry(string binding)
+        {
+            if (DataCache.TryGetValue(binding, out var data))
             {
-                var binding = key.ToString();
-
-                var data = ExtractData(entry);
                 MainThread.BeginInvokeOnMainThread(() => MainPage?.UpdateDisplay(binding, data));
-            },
-            NotifyFlags.Immediate | NotifyFlags.New | NotifyFlags.Update | NotifyFlags.Local);
+            }
         }
 
-        public static void ReadBinding(string binding)
+        public static void UpdateEntry(int id, JsonElement entryData)
         {
-            if (Table is null) return;
-
-            var entry = Table.GetEntry(binding);
-            if (string.IsNullOrEmpty(entry.GetString(string.Empty))) return;
-
-            var data = ExtractData(entry);
-            MainPage?.UpdateDisplay(binding, data);
+            if (IdToBinding.TryGetValue(id, out var binding))
+            {
+                var data = ExtractData(entryData);
+                DataCache[binding] = data;
+                MainThread.BeginInvokeOnMainThread(() => MainPage?.UpdateDisplay(binding, data));
+            }
         }
 
-        static object? ExtractData(NetworkTableEntry entry)
+        static object? ExtractData(JsonElement jsonData)
         {
-            string json = entry.GetString(string.Empty);
+            string? json = jsonData.GetString();
+            if (json is null) return null;
+
             using var doc = JsonDocument.Parse(json);
 
             object? data = null;
