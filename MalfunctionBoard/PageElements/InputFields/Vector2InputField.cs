@@ -1,6 +1,6 @@
 ﻿using MalfunctionBoard.Interfaces;
 
-namespace MalfunctionBoard.InputFields
+namespace MalfunctionBoard.PageElements.InputFields
 {
     public partial class Vector2InputField<T> : InputField where T : IHasVector2, new()
     {

@@ -1,6 +1,6 @@
 ﻿using MalfunctionBoard.Displays;
 using MalfunctionBoard.Exceptions;
-using MalfunctionBoard.InputFields;
+using MalfunctionBoard.PageElements.InputFields;
 using MalfunctionBoard.Records.GridData;
 using MalfunctionBoard.Utilities;
 

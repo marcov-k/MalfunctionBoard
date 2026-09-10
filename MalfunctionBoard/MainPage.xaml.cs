@@ -1,10 +1,10 @@
-﻿using MalfunctionBoard.Buttons;
-using MalfunctionBoard.Displays;
+﻿using MalfunctionBoard.Displays;
 using MalfunctionBoard.Exceptions;
 using MalfunctionBoard.Interfaces;
+using MalfunctionBoard.PageElements.Buttons;
+using MalfunctionBoard.PageElements.Labels;
 using MalfunctionBoard.Records.Displays;
 using MalfunctionBoard.Records.GridData;
-using MalfunctionBoard.SubPages;
 using MalfunctionBoard.Utilities;
 using Microsoft.Maui.Devices;
 
@@ -23,9 +23,19 @@ namespace MalfunctionBoard
         static readonly Thickness GridMargin = new(10);
         const double AddButtonSpacing = 0;
         static readonly Thickness AddButtonMargin = new(10);
+        const double BottomBarSpacing = 0;
+        static readonly Thickness BottomBarMargin = new(10);
         internal static readonly Color CellColor = Colors.Gray;
         static readonly Color GridColor = Colors.LightGray;
         static readonly Color PageColor = Colors.DarkGray;
+
+        public bool Connected
+        {
+            get => (bool)GetValue(ConnectedProperty);
+            set => SetValue(ConnectedProperty, value);
+        }
+        static readonly BindableProperty ConnectedProperty =
+            BindableProperty.Create(nameof(Connected), typeof(bool), typeof(MainPage), false);
 
         public MainPage()
         {
@@ -40,7 +50,7 @@ namespace MalfunctionBoard
                 {
                     new() { Height = new(1, GridUnitType.Star) },
                     new() { Height = new(10, GridUnitType.Star) },
-                    new() { Height = new(0.75, GridUnitType.Star) }
+                    new() { Height = new(0.5, GridUnitType.Star) }
                 },
                 ColumnDefinitions =
                 {
@@ -95,8 +105,31 @@ namespace MalfunctionBoard
                 });
             }
 
+            HorizontalStackLayout bottomBar = new()
+            {
+                BackgroundColor = CellColor,
+                Spacing = BottomBarSpacing,
+                HorizontalOptions = LayoutOptions.Fill,
+                VerticalOptions = LayoutOptions.Fill,
+            };
+
+            var connectionLabel = new BinaryLabel()
+            {
+                TrueLabel = "Connected",
+                FalseLabel = "Connecting...",
+                TrueColor = Colors.ForestGreen,
+                FalseColor = Colors.DarkRed,
+                FontSize = 25.0,
+                Margin = BottomBarMargin
+            };
+            connectionLabel.SetBinding(BinaryLabel.ValueProperty, new Binding(nameof(Connected), source: this));
+            connectionLabel.Value = Connected;
+
+            bottomBar.Add(connectionLabel);
+
             pageLayout.Add(topBar, 0, 0);
             pageLayout.Add(MainGrid, 0, 1);
+            pageLayout.Add(bottomBar, 0, 2);
             Content = pageLayout;
 
             Loaded += OnPageLoaded;
@@ -238,7 +271,7 @@ namespace MalfunctionBoard
         void InitNetworkTable()
         {
             NetworkTableReader.InitReader(this);
-            _ = WebSocketsWrapper.ConnectWebSocket();
+            _ = WebSocketsWrapper.ConnectWebSocket(this);
         }
     }
 }

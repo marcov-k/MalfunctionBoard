@@ -1,4 +1,4 @@
-﻿namespace MalfunctionBoard.InputFields
+﻿namespace MalfunctionBoard.PageElements.InputFields
 {
     public partial class InputField : ContentView
     {

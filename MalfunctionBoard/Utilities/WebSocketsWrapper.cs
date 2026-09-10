@@ -13,9 +13,12 @@ namespace MalfunctionBoard.Utilities
         static ClientWebSocket? ClientSocket;
         static readonly CancellationTokenSource ReconnectToken = new();
         static readonly JsonSerializerOptions JsonConfig = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+        static MainPage? MainPage;
         
-        public static async Task ConnectWebSocket()
+        public static async Task ConnectWebSocket(MainPage mainPage)
         {
+            MainPage = mainPage;
+
             NT4HandshakePayload[] payload = [new()];
             string payloadJson = JsonSerializer.Serialize(payload, JsonConfig);
             byte[] payloadBytes = Encoding.UTF8.GetBytes(payloadJson);
@@ -25,6 +28,8 @@ namespace MalfunctionBoard.Utilities
             {
                 if (ClientSocket is null || ClientSocket.State != WebSocketState.Open)
                 {
+                    UpdateConnectionStatus(false);
+
                     ClientSocket?.Dispose();
                     ClientSocket = new();
                     ClientSocket.Options.AddSubProtocol("v4.0.networktables.first.wpi.edu");
@@ -34,10 +39,11 @@ namespace MalfunctionBoard.Utilities
                         try
                         {
                             await ClientSocket.ConnectAsync(Uri, timeoutTokenSource.Token);
-
                             await ClientSocket.SendAsync(payloadByteBuffer, WebSocketMessageType.Text, true, timeoutTokenSource.Token);
 
                             _ = StartReadingLoop();
+
+                            UpdateConnectionStatus(true);
                         }
                         catch (Exception) { }
                     }
@@ -89,6 +95,11 @@ namespace MalfunctionBoard.Utilities
                 }
             }
             catch (Exception) { }
+        }
+
+        static void UpdateConnectionStatus(bool status)
+        {
+            MainThread.BeginInvokeOnMainThread(() => MainPage?.Connected = status);
         }
 
         static void HandleAnnounce(JsonElement data)

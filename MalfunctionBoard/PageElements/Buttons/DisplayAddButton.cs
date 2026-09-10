@@ -1,6 +1,6 @@
 ﻿using MalfunctionBoard.SubPages;
 
-namespace MalfunctionBoard.Buttons
+namespace MalfunctionBoard.PageElements.Buttons
 {
     public partial class DisplayAddButton : Button
     {
