@@ -5,11 +5,7 @@
         public bool Value
         {
             get => (bool)GetValue(ValueProperty);
-            set
-            {
-                SetValue(ValueProperty, value);
-                UpdateDisplay();
-            }
+            set => SetValue(ValueProperty, value);
         }
         public static readonly BindableProperty ValueProperty =
             BindableProperty.Create(nameof(Value), typeof(bool), typeof(BinaryLabel), false, propertyChanged: OnValueChanged);
