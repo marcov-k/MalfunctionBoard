@@ -188,13 +188,5 @@ namespace MalfunctionBoard.Utilities
             public int Id { get; set; }
             public string Type { get; set; }
         }
-
-        [Serializable]
-        struct NT4UpdateParams
-        {
-            public int Id { get; set; }
-            public int Pubuid { get; set; }
-            public JsonElement Val { get; set; }
-        }
     }
 }
