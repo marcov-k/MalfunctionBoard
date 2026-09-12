@@ -117,13 +117,12 @@ namespace MalfunctionBoard
             {
                 TrueLabel = "Connected",
                 FalseLabel = "Connecting...",
-                TrueColor = Colors.ForestGreen,
+                TrueColor = Colors.Green,
                 FalseColor = Colors.DarkRed,
                 FontSize = 25.0,
                 Margin = BottomBarMargin
             };
             connectionLabel.SetBinding(BinaryLabel.ValueProperty, new Binding(nameof(Connected), source: this));
-            connectionLabel.Value = Connected;
 
             bottomBar.Add(connectionLabel);
 

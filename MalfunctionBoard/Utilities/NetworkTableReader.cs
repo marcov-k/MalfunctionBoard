@@ -1,4 +1,5 @@
 ﻿using MalfunctionBoard.TableDatatypes;
+using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace MalfunctionBoard.Utilities
@@ -6,8 +7,8 @@ namespace MalfunctionBoard.Utilities
     public static class NetworkTableReader
     {
         static MainPage? MainPage;
-        static readonly Dictionary<int, string> IdToBinding = [];
-        static readonly Dictionary<string, object?> DataCache = [];
+        static readonly ConcurrentDictionary<int, string> IdToBinding = [];
+        static readonly ConcurrentDictionary<string, object?> DataCache = [];
 
         public static void InitReader(MainPage mainPage)
         {
@@ -28,7 +29,7 @@ namespace MalfunctionBoard.Utilities
             }
         }
 
-        public static void UpdateEntry(int id, JsonElement entryData)
+        public static void UpdateEntry(int id, string entryData)
         {
             if (IdToBinding.TryGetValue(id, out var binding))
             {
@@ -38,11 +39,8 @@ namespace MalfunctionBoard.Utilities
             }
         }
 
-        static object? ExtractData(JsonElement jsonData)
+        static object? ExtractData(string json)
         {
-            string? json = jsonData.GetString();
-            if (json is null) return null;
-
             using var doc = JsonDocument.Parse(json);
 
             object? data = null;
