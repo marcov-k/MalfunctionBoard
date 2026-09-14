@@ -1,6 +1,6 @@
 package com.malfunctionz.malfunctionboard.nt.datatypes;
 
-public record MBString(String type, String data)
+public record MBString(String type, String data) implements MBData
 {
     public MBString(String data)
     {

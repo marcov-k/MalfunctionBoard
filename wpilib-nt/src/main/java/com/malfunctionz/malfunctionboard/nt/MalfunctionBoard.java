@@ -24,24 +24,9 @@ public class MalfunctionBoard
         networkTable = NetworkTableInstance.getDefault().getTable(kNetworkTableName);
     }
 
-    public void writeInt(String entryName, MBInt value)
-    {
-        writeDataToEntry(getEntry(entryName), value);
-    }
-
-    public void writeDouble(String entryName, MBDouble value)
-    {
-        writeDataToEntry(getEntry(entryName), value);
-    }
-
-    public void writeString(String entryName, MBString data)
+    public void writeData(String entryName, MBData data)
     {
         writeDataToEntry(getEntry(entryName), data);
-    }
-
-    public void writeBool(String entryName, MBBool value)
-    {
-        writeDataToEntry(getEntry(entryName), value);
     }
 
     StringPublisher getEntry(String entryName)
@@ -49,7 +34,7 @@ public class MalfunctionBoard
         return publisherCache.computeIfAbsent(entryName, name -> networkTable.getStringTopic(name).publish());
     }
 
-    static <T> void writeDataToEntry(StringPublisher entry, T data)
+    static void writeDataToEntry(StringPublisher entry, MBData data)
     {
         String json = gson.toJson(data);
         entry.set(json);
