@@ -16,20 +16,15 @@ public class MalfunctionBoard
         .setFieldNamingPolicy(FieldNamingPolicy.UPPER_CAMEL_CASE)
         .create();
 
-    final NetworkTable networkTable;
-    final HashMap<String, StringPublisher> publisherCache = new HashMap<>();
+    static final NetworkTable networkTable = NetworkTableInstance.getDefault().getTable(kNetworkTableName);
+    static final HashMap<String, StringPublisher> publisherCache = new HashMap<>();
 
-    public MalfunctionBoard()
-    {
-        networkTable = NetworkTableInstance.getDefault().getTable(kNetworkTableName);
-    }
-
-    public void writeData(String entryName, MBData data)
+    public static void writeData(String entryName, MBData data)
     {
         writeDataToEntry(getEntry(entryName), data);
     }
 
-    StringPublisher getEntry(String entryName)
+    static StringPublisher getEntry(String entryName)
     {
         return publisherCache.computeIfAbsent(entryName, name -> networkTable.getStringTopic(name).publish());
     }
@@ -40,7 +35,7 @@ public class MalfunctionBoard
         entry.set(json);
     }
 
-    public void close()
+    public static void close()
     {
         for (StringPublisher publisher : publisherCache.values())
         {
